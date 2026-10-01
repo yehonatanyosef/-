@@ -51,11 +51,13 @@ export function createProfile(name: string, age: number, avatar: string, now = D
 
 /** Applies a placement result: sets ability, opens earlier islands and seeds their words for review. */
 export function applyPlacement(profile: Profile, level: number, ability: number, now = Date.now()): Profile {
-  const start = startIslandIndex(level);
+  // Start at the matching island – or the next one that suits the child's age.
+  let start = startIslandIndex(level);
+  while (start < ISLANDS.length - 1 && !islandSuitsAge({ ...profile, ability }, ISLANDS[start])) start++;
   const unlocked = new Set(profile.unlocked);
   const items = { ...profile.items };
   ISLANDS.forEach((island, idx) => {
-    if (idx < start) {
+    if (idx < start && islandSuitsAge({ ...profile, ability }, island)) {
       island.stages.forEach((s) => unlocked.add(s.id));
       // Assume earlier material is mostly known – schedule it as light review spread over the next days.
       const seedIds = island.kind === 'letters' ? LETTERS.map((l) => l.id) : island.kind === 'words' ? island.itemIds : [];

@@ -268,6 +268,27 @@ describe('placement test', () => {
       }
   });
 
+  it('ages 4–5: the first 8 questions are only "listen and pick a picture" – no letters', () => {
+    for (const age of [4, 5])
+      for (let seed = 0; seed < 50; seed++) {
+        const r = run(age, () => true, seed);
+        r.asked.slice(0, YOUNG_EASY_QUESTIONS).forEach((a) => expect(a.kind).toBe('listen-pick'));
+      }
+  });
+
+  it('ages 4–5 start the journey on the animals island, without letters', () => {
+    for (const age of [4, 5]) {
+      const r = run(age, (t) => t === 0);
+      const p = applyPlacement(createProfile('a', age, '🦸', NOW), r.level, r.ability, NOW);
+      expect(currentStage(p)?.id).toBe('animals-0');
+      expect(isStageUnlocked(p, STAGES_BY_ID['abc-0'])).toBe(false);
+      expect(Object.keys(p.items).some((id) => id.startsWith('letter-'))).toBe(false);
+    }
+    // From 6 the alphabet island is the first stop again.
+    expect(currentStage(createProfile('b', 6, '🦸', NOW))?.id).toBe('abc-0');
+    expect(currentStage(createProfile('c', 4, '🦸', NOW))?.id).toBe('animals-0');
+  });
+
   it('ages 5–6: harder questions come only late, and only for children who answer almost everything', () => {
     const strong = run(5, () => true);
     const firstHard = strong.asked.findIndex((a) => a.tier > 2);

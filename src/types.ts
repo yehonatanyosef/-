@@ -123,6 +123,10 @@ export interface Profile {
   perfectLessons: number;
   spokenCorrect: number;
   totalSeconds: number;
+  /** Last local change (epoch ms) – used to resolve sync conflicts. */
+  updatedAt?: number;
+  /** Set when a parent resets progress – older copies must not bring it back. */
+  resetAt?: number;
 }
 
 export interface Settings {
@@ -138,4 +142,7 @@ export interface AppData {
   profiles: Profile[];
   activeProfileId: string | null;
   settings: Settings;
+  settingsUpdatedAt?: number;
+  /** Ids of deleted profiles, so deletions also sync to other devices. */
+  deleted?: string[];
 }

@@ -3,6 +3,8 @@ import { applyPlacement, createProfile } from './engine/progress';
 import { setSoundEnabled } from './engine/sound';
 import { setSpeechRate } from './engine/speech';
 import { activeProfile, loadData, saveData } from './engine/storage';
+import { mergeData } from './engine/sync';
+import { useCloudSync } from './hooks/useCloudSync';
 import { LessonScreen } from './screens/LessonScreen';
 import { MapScreen } from './screens/MapScreen';
 import { ParentScreen } from './screens/ParentScreen';
@@ -35,8 +37,11 @@ export default function App() {
     setSpeechRate(data.settings.speechRate);
   }, [data.settings]);
 
+  const cloud = useCloudSync(data, setData);
+
   const updateProfile = useCallback((p: Profile) => {
-    setData((d) => ({ ...d, profiles: d.profiles.map((x) => (x.id === p.id ? p : x)) }));
+    const stamped = { ...p, updatedAt: Date.now() };
+    setData((d) => ({ ...d, profiles: d.profiles.map((x) => (x.id === p.id ? stamped : x)) }));
   }, []);
 
   const goHome = () => setScreen({ name: 'map' });
@@ -58,6 +63,7 @@ export default function App() {
             setScreen(p.placementDone ? { name: 'map' } : { name: 'placement' });
           }}
           onNew={() => setScreen({ name: 'new-profile' })}
+          onParents={() => setScreen({ name: 'parents' })}
         />
       );
 
@@ -65,6 +71,7 @@ export default function App() {
       return (
         <NewProfileScreen
           onBack={data.profiles.length ? () => setScreen({ name: 'profiles' }) : undefined}
+          onParents={!data.profiles.length && cloud.configured ? () => setScreen({ name: 'parents' }) : undefined}
           onCreate={(name, age, avatar) => {
             const p = createProfile(name, age, avatar);
             setData((d) => ({ ...d, profiles: [...d.profiles, p], activeProfileId: p.id }));
@@ -118,19 +125,27 @@ export default function App() {
           profiles={data.profiles}
           activeId={data.activeProfileId}
           settings={data.settings}
-          onSettings={(settings) => setData((d) => ({ ...d, settings }))}
+          cloud={cloud}
+          data={data}
+          onRestore={(backup) => setData((d) => mergeData(d, backup))}
+          onSettings={(settings) => setData((d) => ({ ...d, settings, settingsUpdatedAt: Date.now() }))}
           onUpdateProfile={updateProfile}
           onDeleteProfile={(id) =>
             setData((d) => {
               const profiles = d.profiles.filter((x) => x.id !== id);
-              return { ...d, profiles, activeProfileId: d.activeProfileId === id ? null : d.activeProfileId };
+              return {
+                ...d,
+                profiles,
+                deleted: [...(d.deleted ?? []), id],
+                activeProfileId: d.activeProfileId === id ? null : d.activeProfileId,
+              };
             })
           }
           onRetakePlacement={(id) => {
             setData((d) => ({
               ...d,
               activeProfileId: id,
-              profiles: d.profiles.map((x) => (x.id === id ? { ...x, placementDone: false } : x)),
+              profiles: d.profiles.map((x) => (x.id === id ? { ...x, placementDone: false, updatedAt: Date.now() } : x)),
             }));
             setScreen({ name: 'placement' });
           }}

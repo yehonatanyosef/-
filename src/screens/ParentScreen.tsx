@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
+import { CloudPanel } from '../components/CloudPanel';
 import { BigButton, En, Modal } from '../components/common';
+import type { CloudSync } from '../hooks/useCloudSync';
 import { ISLANDS } from '../data/islands';
 import { WORDS_BY_ID } from '../data/words';
 import { dayKey, isIslandUnlocked, levelLabel, stageDone, wordStats } from '../engine/progress';
 import { canRecognize, canSpeak } from '../engine/speech';
-import { SKILLS, type Profile, type Settings, type Skill } from '../types';
+import { SKILLS, type AppData, type Profile, type Settings, type Skill } from '../types';
 
 const SKILL_NAMES: Record<Skill, string> = {
   vocab: 'אוצר מילים',
@@ -56,6 +58,9 @@ export function ParentScreen({
   profiles,
   activeId,
   settings,
+  cloud,
+  data,
+  onRestore,
   onSettings,
   onUpdateProfile,
   onDeleteProfile,
@@ -65,6 +70,9 @@ export function ParentScreen({
   profiles: Profile[];
   activeId: string | null;
   settings: Settings;
+  cloud: CloudSync;
+  data: AppData;
+  onRestore: (d: AppData) => void;
   onSettings: (s: Settings) => void;
   onUpdateProfile: (p: Profile) => void;
   onDeleteProfile: (id: string) => void;
@@ -261,6 +269,8 @@ export function ParentScreen({
         </>
       )}
 
+      <CloudPanel cloud={cloud} data={data} onRestore={onRestore} />
+
       <section className="card settings">
         <h3>הגדרות</h3>
         <label className="toggle">
@@ -304,7 +314,7 @@ export function ParentScreen({
           />
         </label>
         {!canSpeak() && <p className="err">הדפדפן לא תומך בהקראה קולית. מומלץ להשתמש ב-Chrome, Edge או Safari.</p>}
-        <p className="muted">כל הנתונים נשמרים במכשיר זה בלבד.</p>
+        <p className="muted">{cloud.user ? 'הנתונים נשמרים במכשיר ובחשבון הענן.' : 'כל הנתונים נשמרים במכשיר זה בלבד.'}</p>
       </section>
 
       {confirm && p && (
@@ -332,6 +342,7 @@ export function ParentScreen({
                     activity: {},
                     achievements: [],
                     placementDone: false,
+                    resetAt: Date.now(),
                     ability: p.age <= 6 ? 1.2 : 1.8,
                     perfectLessons: 0,
                     spokenCorrect: 0,

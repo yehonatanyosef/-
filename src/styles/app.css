@@ -1748,6 +1748,56 @@ h2 {
   padding: 10px 14px;
 }
 
+/* ---------- Cloud & backup ---------- */
+
+.cloud {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cloud h4 {
+  margin: 0;
+}
+.cloud hr {
+  width: 100%;
+  border: none;
+  border-top: 2px dashed #e2e8f0;
+  margin: 6px 0;
+}
+.cloud p {
+  margin: 0;
+}
+.cloud-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cloud-form input {
+  font-size: 1.1rem;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 3px solid var(--sky-2);
+  outline: none;
+}
+.cloud-form input:focus {
+  border-color: var(--blue);
+}
+.cloud-account {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sync-status {
+  font-weight: 700;
+}
+.sync-status.error {
+  color: var(--red-d);
+}
+.ok {
+  color: var(--green-d);
+  font-weight: 600;
+}
+
 /* ---------- Animations ---------- */
 
 @keyframes bob {

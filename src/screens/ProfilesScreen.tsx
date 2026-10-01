@@ -4,7 +4,17 @@ import { AVATARS } from '../data/companions';
 import { levelLabel } from '../engine/progress';
 import type { Profile } from '../types';
 
-export function ProfilesScreen({ profiles, onSelect, onNew }: { profiles: Profile[]; onSelect: (id: string) => void; onNew: () => void }) {
+export function ProfilesScreen({
+  profiles,
+  onSelect,
+  onNew,
+  onParents,
+}: {
+  profiles: Profile[];
+  onSelect: (id: string) => void;
+  onNew: () => void;
+  onParents: () => void;
+}) {
   return (
     <div className="screen profiles">
       <div className="logo">
@@ -28,11 +38,23 @@ export function ProfilesScreen({ profiles, onSelect, onNew }: { profiles: Profil
           <b>שחקן חדש</b>
         </button>
       </div>
+      <button type="button" className="link-btn" onClick={onParents}>
+        👨‍👩‍👧 אזור הורים
+      </button>
     </div>
   );
 }
 
-export function NewProfileScreen({ onCreate, onBack }: { onCreate: (name: string, age: number, avatar: string) => void; onBack?: () => void }) {
+export function NewProfileScreen({
+  onCreate,
+  onBack,
+  onParents,
+}: {
+  onCreate: (name: string, age: number, avatar: string) => void;
+  onBack?: () => void;
+  /** Shown on a fresh device so a parent can log in and pull existing progress. */
+  onParents?: () => void;
+}) {
   const [name, setName] = useState('');
   const [age, setAge] = useState<number | null>(null);
   const [avatar, setAvatar] = useState(AVATARS[0]);
@@ -72,6 +94,11 @@ export function NewProfileScreen({ onCreate, onBack }: { onCreate: (name: string
       <BigButton disabled={!ok} onClick={() => ok && onCreate(name.trim(), age!, avatar)}>
         יוצאים לדרך! 🚀
       </BigButton>
+      {onParents && (
+        <button type="button" className="link-btn" onClick={onParents}>
+          ☁️ כבר שיחקתם במכשיר אחר? התחברות לחשבון הורה
+        </button>
+      )}
     </div>
   );
 }

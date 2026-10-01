@@ -37,3 +37,29 @@ export function saveData(data: AppData): void {
 export function activeProfile(data: AppData): Profile | null {
   return data.profiles.find((p) => p.id === data.activeProfileId) ?? null;
 }
+
+/* ---------- Backup files ---------- */
+
+export function backupFileName(now = new Date()): string {
+  const d = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  return `english-island-backup-${d}.json`;
+}
+
+export function serializeBackup(data: AppData): string {
+  return JSON.stringify({ ...data, activeProfileId: null }, null, 2);
+}
+
+/** Parses a backup file; returns null when the file is not a valid backup. */
+export function parseBackup(text: string): AppData | null {
+  try {
+    const d = JSON.parse(text) as AppData;
+    if (d?.version !== 1 || !Array.isArray(d.profiles)) return null;
+    const valid = d.profiles.every(
+      (p) => p && typeof p.id === 'string' && typeof p.name === 'string' && typeof p.items === 'object' && typeof p.stages === 'object',
+    );
+    if (!valid) return null;
+    return { ...d, settings: { ...DEFAULT_SETTINGS, ...d.settings } };
+  } catch {
+    return null;
+  }
+}

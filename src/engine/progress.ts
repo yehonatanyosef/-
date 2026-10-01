@@ -41,6 +41,7 @@ export function createProfile(name: string, age: number, avatar: string, now = D
     perfectLessons: 0,
     spokenCorrect: 0,
     totalSeconds: 0,
+    updatedAt: now,
   };
 }
 

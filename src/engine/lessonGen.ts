@@ -1,7 +1,9 @@
+import { GRAMMAR_BY_ID, grammarSentence, RULES_BY_ID, type GrammarItem } from '../data/grammar';
 import { ISLANDS, ISLANDS_BY_ID } from '../data/islands';
 import { LETTERS, LETTERS_BY_ID } from '../data/letters';
 import { SENTENCES, SENTENCES_BY_ID } from '../data/sentences';
 import { STORIES, STORIES_BY_ID } from '../data/stories';
+import { PHRASES_BY_ID, type Phrase } from '../data/talk';
 import { ALL_WORDS, ALPHABET_WORDS, WORDS_BY_ID } from '../data/words';
 import type { Island, Letter, Profile, Sentence, Stage, Story, Word } from '../types';
 import type { Exercise, ExerciseKind } from './exercises';
@@ -202,6 +204,56 @@ function sentenceExercises(s: Sentence, count: number, ctx: GenContext): Exercis
   });
 }
 
+/** Sentence-building tiles for any sentence (shuffled, never already in order). */
+function buildTiles(en: string, rng: Rng): string[] {
+  const words = en.split(' ');
+  let tiles = shuffle(words, rng);
+  if (tiles.join(' ') === en && words.length > 1) tiles = [...tiles.slice(1), tiles[0]];
+  return tiles;
+}
+
+function talkExercises(p: Phrase, count: number, ctx: GenContext, avoid: ExerciseKind[] = []): Exercise[] {
+  const a = ctx.profile.ability;
+  type K = ExerciseKind | 'dialog-audio';
+  const weights: { value: K; weight: number }[] = [
+    { value: 'dialog-reply', weight: 3 },
+    { value: 'dialog-audio', weight: a >= 3 ? 1.5 : 0 },
+    { value: 'say-reply', weight: ctx.speaking && a >= 2.2 ? 1.5 : 0 },
+    { value: 'sentence-build', weight: a >= 2.5 && p.reply.split(' ').length <= 7 ? 1.2 : 0 },
+  ];
+  const chosen: K[] = [];
+  for (let i = 0; i < count; i++) {
+    const k = weightedPick(weights.filter((w) => !chosen.includes(w.value) && !avoid.includes(w.value as ExerciseKind)), ctx.rng);
+    if (k) chosen.push(k);
+  }
+  return chosen.map((kind): Exercise => {
+    const base = { uid: nextUid(), itemId: p.id };
+    if (kind === 'say-reply') return { ...base, kind, skill: 'speaking', phrase: p };
+    if (kind === 'sentence-build') {
+      const sentence = { id: p.id, en: p.reply, he: p.replyHe, emoji: p.emoji, level: p.level };
+      return { ...base, kind, skill: 'conversation', sentence, tiles: buildTiles(p.reply, ctx.rng) };
+    }
+    return {
+      ...base,
+      kind: 'dialog-reply',
+      skill: kind === 'dialog-audio' ? 'listening' : 'conversation',
+      phrase: p,
+      audioOnly: kind === 'dialog-audio',
+      options: shuffle([p.reply, ...p.wrong], ctx.rng),
+    };
+  });
+}
+
+function grammarExercises(g: GrammarItem, count: number, ctx: GenContext): Exercise[] {
+  const out: Exercise[] = [{ uid: nextUid(), itemId: g.id, kind: 'grammar-choice', skill: 'grammar', item: g, options: shuffle(g.options, ctx.rng) }];
+  if (count > 1) {
+    const en = grammarSentence(g);
+    const sentence = { id: g.id, en, he: g.he, emoji: g.emoji, level: g.level };
+    out.push({ uid: nextUid(), itemId: g.id, kind: 'sentence-build', skill: 'grammar', sentence, tiles: buildTiles(en, ctx.rng) });
+  }
+  return out;
+}
+
 export function storyQuestionExercise(story: Story, qi: number, ctx: GenContext): Exercise {
   const q = story.questions[qi];
   return {
@@ -223,6 +275,8 @@ export function reviewExercise(itemId: string, ctx: GenContext): Exercise | null
   }
   if (LETTERS_BY_ID[itemId]) return letterExercises(LETTERS_BY_ID[itemId], 1, ctx)[0];
   if (SENTENCES_BY_ID[itemId]) return sentenceExercises(SENTENCES_BY_ID[itemId], 1, ctx)[0];
+  if (PHRASES_BY_ID[itemId]) return talkExercises(PHRASES_BY_ID[itemId], 1, ctx, ['say-reply'])[0] ?? null;
+  if (GRAMMAR_BY_ID[itemId]) return grammarExercises(GRAMMAR_BY_ID[itemId], 1, ctx)[0];
   const m = itemId.match(/^(story-\d+)-q(\d+)$/);
   if (m && STORIES_BY_ID[m[1]]) return storyQuestionExercise(STORIES_BY_ID[m[1]], Number(m[2]), ctx);
   return null;
@@ -308,6 +362,38 @@ function regularLesson(island: Island, stage: Stage, ctx: GenContext): Exercise[
     return [...intro, ...spread(later, rng), ...(mem ? [mem] : [])];
   }
 
+  if (island.kind === 'talk') {
+    const phrases = stage.itemIds.map((id) => PHRASES_BY_ID[id]);
+    for (const p of phrases) {
+      if (isNew(ctx, p.id)) intro.push({ uid: nextUid(), kind: 'learn-phrase', phrase: p, itemId: p.id });
+      const [first, second] = talkExercises(p, 2, ctx);
+      intro.push(first);
+      if (second) later.push(second);
+    }
+    const reviews = dueReviews(ctx, stage.itemIds, reviewCount)
+      .map((id) => reviewExercise(id, ctx))
+      .filter((e): e is Exercise => !!e);
+    return [...intro, ...spread([...later, ...reviews], rng)];
+  }
+
+  if (island.kind === 'grammar') {
+    const items = stage.itemIds.map((id) => GRAMMAR_BY_ID[id]);
+    const rule = RULES_BY_ID[items[0].rule];
+    const out: Exercise[] = [];
+    // Explain the rule the first time (or while it is still shaky).
+    if (items.some((g) => isNew(ctx, g.id))) out.push({ uid: nextUid(), kind: 'learn-rule', rule });
+    const builds: Exercise[] = [];
+    items.forEach((g, i) => {
+      const [choice, build] = grammarExercises(g, ctx.profile.ability >= 2.5 && i < 3 ? 2 : 1, ctx);
+      out.push(choice);
+      if (build) builds.push(build);
+    });
+    const reviews = dueReviews(ctx, stage.itemIds, reviewCount)
+      .map((id) => reviewExercise(id, ctx))
+      .filter((e): e is Exercise => !!e);
+    return [...out.slice(0, 1), ...spread(out.slice(1), rng), ...spread([...builds, ...reviews], rng)];
+  }
+
   if (island.kind === 'sentences') {
     const sentences = stage.itemIds.map((id) => SENTENCES_BY_ID[id]);
     for (const s of sentences) {
@@ -348,6 +434,14 @@ function bossLesson(island: Island, ctx: GenContext): Exercise[] {
   if (island.kind === 'letters') {
     const letters = sample(LETTERS, size, rng);
     return spread(letters.map((l) => letterExercises(l, 1, ctx)[0]), rng);
+  }
+  if (island.kind === 'talk') {
+    const phrases = sample(island.itemIds.map((id) => PHRASES_BY_ID[id]), size, rng);
+    return spread(phrases.map((p) => talkExercises(p, 1, ctx)[0]), rng);
+  }
+  if (island.kind === 'grammar') {
+    const items = sample(island.itemIds.map((id) => GRAMMAR_BY_ID[id]), size, rng);
+    return spread(items.map((g) => grammarExercises(g, 1, ctx)[0]), rng);
   }
   if (island.kind === 'sentences') {
     const sentences = sample(island.itemIds.map((id) => SENTENCES_BY_ID[id]), size, rng);

@@ -8,6 +8,7 @@ export const DEFAULT_SETTINGS: Settings = {
   speechRate: 0.85,
   dailyGoal: 40,
   hebrewHints: true,
+  naturalVoice: true,
 };
 
 export function emptyData(): AppData {

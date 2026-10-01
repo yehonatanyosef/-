@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { CloudPanel } from '../components/CloudPanel';
+import { InstallButton } from '../components/InstallButton';
 import { BigButton, En, Modal } from '../components/common';
 import type { CloudSync } from '../hooks/useCloudSync';
 import { ISLANDS } from '../data/islands';
@@ -15,6 +16,8 @@ const SKILL_NAMES: Record<Skill, string> = {
   reading: 'קריאה',
   spelling: 'איות',
   phonics: 'אותיות וצלילים',
+  grammar: 'דקדוק',
+  conversation: 'שיחה',
 };
 
 function ParentGate({ onPass, onBack }: { onPass: () => void; onBack: () => void }) {
@@ -278,6 +281,10 @@ export function ParentScreen({
           צלילים ואפקטים
         </label>
         <label className="toggle">
+          <input type="checkbox" checked={settings.naturalVoice} onChange={(e) => onSettings({ ...settings, naturalVoice: e.target.checked })} />
+          קול טבעי מוקלט (במקום הקול של המכשיר)
+        </label>
+        <label className="toggle">
           <input type="checkbox" checked={settings.hebrewHints} onChange={(e) => onSettings({ ...settings, hebrewHints: e.target.checked })} />
           רמזים בעברית (למתחילים)
         </label>
@@ -313,7 +320,11 @@ export function ParentScreen({
             onChange={(e) => onSettings({ ...settings, dailyGoal: Number(e.target.value) })}
           />
         </label>
-        {!canSpeak() && <p className="err">הדפדפן לא תומך בהקראה קולית. מומלץ להשתמש ב-Chrome, Edge או Safari.</p>}
+        {!canSpeak() && !settings.naturalVoice && <p className="err">הדפדפן לא תומך בהקראה קולית. מומלץ להשתמש ב-Chrome, Edge או Safari.</p>}
+        <InstallButton />
+        <p className="muted credits">
+          קול: Piper TTS (CC0) · איורים: Microsoft Fluent Emoji (MIT)
+        </p>
         <p className="muted">{cloud.user ? 'הנתונים נשמרים במכשיר ובחשבון הענן.' : 'כל הנתונים נשמרים במכשיר זה בלבד.'}</p>
       </section>
 

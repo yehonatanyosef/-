@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { BigButton, Companion, En } from '../components/common';
+import { InstallButton } from '../components/InstallButton';
 import { AVATARS } from '../data/companions';
 import { levelLabel } from '../engine/progress';
 import type { Profile } from '../types';
+import { Emoji } from '../components/Emoji';
 
 export function ProfilesScreen({
   profiles,
@@ -28,7 +30,9 @@ export function ProfilesScreen({
       <div className="profile-list">
         {profiles.map((p) => (
           <button key={p.id} type="button" className="profile-card" onClick={() => onSelect(p.id)}>
-            <span className="avatar big">{p.avatar}</span>
+            <span className="avatar big">
+              <Emoji char={p.avatar} size={60} />
+            </span>
             <b>{p.name}</b>
             <small>{levelLabel(p.ability).he}</small>
           </button>
@@ -38,6 +42,7 @@ export function ProfilesScreen({
           <b>שחקן חדש</b>
         </button>
       </div>
+      <InstallButton />
       <button type="button" className="link-btn" onClick={onParents}>
         👨‍👩‍👧 אזור הורים
       </button>
@@ -86,7 +91,7 @@ export function NewProfileScreen({
         <div className="avatar-grid">
           {AVATARS.map((a) => (
             <button key={a} type="button" className={`avatar-pick ${avatar === a ? 'on' : ''}`} onClick={() => setAvatar(a)}>
-              {a}
+              <Emoji char={a} size={40} />
             </button>
           ))}
         </div>

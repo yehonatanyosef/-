@@ -1,6 +1,8 @@
+import { GRAMMAR_ITEMS } from '../data/grammar';
 import { LETTERS } from '../data/letters';
 import { SENTENCES } from '../data/sentences';
 import { STORIES } from '../data/stories';
+import { PHRASES } from '../data/talk';
 import { ALL_WORDS } from '../data/words';
 import type { Profile } from '../types';
 import type { Exercise } from './exercises';
@@ -46,8 +48,13 @@ export function placementQuestion(s: PlacementState, profile: Profile, rng: Rng)
       return buildWordExercise(rng() < 0.5 ? 'listen-pick' : 'word-pick-picture', word, ctx);
     }
     case 3: {
+      const r = rng();
+      if (r < 0.3) {
+        const p = pick(PHRASES.filter((x) => x.level <= 3 && !s.used.includes(x.id)), rng);
+        return { uid: nextUid(), kind: 'dialog-reply', itemId: p.id, phrase: p, audioOnly: false, options: shuffle([p.reply, ...p.wrong], rng) };
+      }
       const word = pick(freshWords(2, 3), rng);
-      return buildWordExercise(rng() < 0.5 ? 'picture-pick-word' : 'missing-letter', word, ctx);
+      return buildWordExercise(r < 0.65 ? 'picture-pick-word' : 'missing-letter', word, ctx);
     }
     case 4: {
       if (rng() < 0.5) {
@@ -58,7 +65,12 @@ export function placementQuestion(s: PlacementState, profile: Profile, rng: Rng)
       return { uid: nextUid(), kind: 'sentence-picture', itemId: sentence.id, sentence, options: shuffle([sentence, ...sample(SENTENCES.filter((x) => x.id !== sentence.id && x.emoji !== sentence.emoji), 2, rng)], rng) };
     }
     default: {
-      if (rng() < 0.5) {
+      const r = rng();
+      if (r < 0.3) {
+        const g = pick(GRAMMAR_ITEMS.filter((x) => x.level >= 4 && !s.used.includes(x.id)), rng);
+        return { uid: nextUid(), kind: 'grammar-choice', itemId: g.id, item: g, options: shuffle(g.options, rng) };
+      }
+      if (r < 0.65) {
         const sentence = pick(SENTENCES.filter((x) => x.level >= 4 && !s.used.includes(x.id)), rng);
         return { uid: nextUid(), kind: 'listen-sentence', itemId: sentence.id, sentence, options: shuffle([sentence, ...sample(SENTENCES.filter((x) => x.id !== sentence.id), 2, rng)], rng) };
       }

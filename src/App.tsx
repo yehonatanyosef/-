@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { applyPlacement, createProfile } from './engine/progress';
 import { setSoundEnabled } from './engine/sound';
-import { setSpeechRate } from './engine/speech';
+import { setNaturalVoice, setSpeechRate } from './engine/speech';
 import { activeProfile, loadData, saveData } from './engine/storage';
 import { mergeData } from './engine/sync';
 import { useCloudSync } from './hooks/useCloudSync';
@@ -35,6 +35,7 @@ export default function App() {
   useEffect(() => {
     setSoundEnabled(data.settings.sound);
     setSpeechRate(data.settings.speechRate);
+    setNaturalVoice(data.settings.naturalVoice);
   }, [data.settings]);
 
   const cloud = useCloudSync(data, setData);

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { En, Picture, SpeakButton } from '../components/common';
 import { sfx } from '../engine/sound';
 import type { ExProps } from './types';
+import { EmojiScene } from '../components/Emoji';
 
 /**
  * Tap tiles to fill the answer slots. Works for letters (spelling) and words (sentence building).
@@ -110,7 +111,7 @@ export function SentenceBuild({ ex, hints, onAnswer }: ExProps<'sentence-build'>
   return (
     <div className="ex">
       <div className="prompt column">
-        <span className="emoji scene">{ex.sentence.emoji}</span>
+        <EmojiScene text={ex.sentence.emoji} />
         <span className="he-hint big">{ex.sentence.he}</span>
         <SpeakButton text={ex.sentence.en} auto={hints.autoAudio} />
       </div>

@@ -197,6 +197,33 @@ h2 {
   font-size: 56px;
   letter-spacing: 4px;
 }
+.emoji-img {
+  display: inline-block;
+  object-fit: contain;
+  vertical-align: middle;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 2px rgba(15, 23, 42, 0.12));
+}
+.emoji-scene {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.feedback .companion-emoji .emoji-img {
+  width: 46px;
+  height: 46px;
+}
+.avatar,
+.avatar-pick,
+.island-emoji,
+.sheet-emoji,
+.shop-emoji,
+.node-companion,
+.companion-emoji {
+  line-height: 0;
+}
 
 .swatch {
   display: inline-block;
@@ -496,6 +523,8 @@ h2 {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
 }
 .avatar-btn {
+  flex: 1;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -506,6 +535,7 @@ h2 {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  overflow: hidden;
 }
 .who b {
   white-space: nowrap;
@@ -514,6 +544,8 @@ h2 {
 }
 .who small {
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--muted);
   font-size: 0.75rem;
 }
@@ -880,6 +912,8 @@ h2 {
   font-weight: 700;
 }
 .he-hint {
+  direction: rtl;
+  unicode-bidi: isolate;
   font-size: 0.9rem;
   color: var(--muted);
   font-weight: 500;
@@ -1746,6 +1780,128 @@ h2 {
 .actions .big-btn {
   font-size: 1rem;
   padding: 10px 14px;
+}
+
+/* ---------- Conversation ---------- */
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  direction: ltr;
+}
+.chat-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.chat-row.me {
+  flex-direction: row-reverse;
+}
+.chat-avatar {
+  line-height: 0;
+  flex-shrink: 0;
+}
+.chat-bubble {
+  background: white;
+  border-radius: 20px 20px 20px 6px;
+  padding: 12px 14px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: 80%;
+}
+.chat-row.me .chat-bubble {
+  background: #dbeafe;
+  border-radius: 20px 20px 6px 20px;
+  align-items: flex-end;
+}
+.learn-card .chat-bubble {
+  box-shadow: 0 3px 0 rgba(15, 23, 42, 0.08);
+  background: #f8fafc;
+}
+.chat-en {
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+.chat.wide .chat-en {
+  font-size: 1.6rem;
+}
+
+/* ---------- Grammar ---------- */
+
+.rule-card {
+  text-align: center;
+}
+.rule-title {
+  font-family: 'Fredoka', 'Rubik', sans-serif;
+  color: var(--green-d);
+  font-size: 1.8rem;
+}
+.rule-explain {
+  font-size: 1.15rem;
+  line-height: 1.6;
+  margin: 0;
+  background: #f0fdf4;
+  border-radius: 16px;
+  padding: 12px;
+}
+.rule-examples {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.rule-example {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f8fafc;
+  border-radius: 14px;
+  padding: 8px 10px;
+  direction: ltr;
+  flex-wrap: wrap;
+}
+.rule-en {
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+.gap-sentence {
+  line-height: 2;
+}
+.gap {
+  display: inline-block;
+  min-width: 80px;
+  margin: 0 6px;
+  padding: 0 10px;
+  border-bottom: 4px solid var(--orange);
+  color: var(--orange);
+  text-align: center;
+  border-radius: 8px 8px 0 0;
+  background: #fff7ed;
+}
+.gap.right {
+  color: var(--green-d);
+  border-color: var(--green);
+  background: #dcfce7;
+}
+.gap.wrong {
+  color: var(--red-d);
+  border-color: var(--red);
+  background: #fee2e2;
+}
+
+/* ---------- Install ---------- */
+
+.ios-steps {
+  text-align: start;
+  line-height: 1.9;
+  font-size: 1.1rem;
+  margin: 0;
+  padding-inline-start: 22px;
 }
 
 /* ---------- Cloud & backup ---------- */

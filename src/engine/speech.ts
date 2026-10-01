@@ -1,4 +1,50 @@
-/* Text-to-speech and speech recognition built on the Web Speech API. */
+/*
+ * Speech output and recognition.
+ * English is played from pre-generated natural-voice recordings (public/audio, see
+ * scripts/generate-audio.py) and falls back to the browser's text-to-speech when a
+ * phrase has no recording. Recognition uses the Web Speech API.
+ */
+import manifest from '../data/audio-manifest.json';
+
+const AUDIO_FILES: Record<string, string> = (manifest as { files: Record<string, string> }).files;
+
+/** Lookup key shared with the generation script. */
+export function audioKey(text: string): string {
+  return text.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+export function hasRecording(text: string): boolean {
+  return audioKey(text) in AUDIO_FILES;
+}
+
+let naturalVoice = true;
+export function setNaturalVoice(on: boolean) {
+  naturalVoice = on;
+}
+
+let currentAudio: HTMLAudioElement | null = null;
+
+/** Plays a recording; resolves false if it could not be played (so TTS can take over). */
+function playRecording(file: string, playbackRate: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    stopSpeaking();
+    const audio = new Audio(`${import.meta.env.BASE_URL}audio/${file}`);
+    audio.playbackRate = playbackRate;
+    audio.preservesPitch = true;
+    currentAudio = audio;
+    let settled = false;
+    const done = (ok: boolean) => {
+      if (settled) return;
+      settled = true;
+      if (currentAudio === audio) currentAudio = null;
+      resolve(ok);
+    };
+    audio.onended = () => done(true);
+    audio.onpause = () => done(true);
+    audio.onerror = () => done(false);
+    audio.play().catch(() => done(false));
+  });
+}
 
 let voicesCache: SpeechSynthesisVoice[] = [];
 
@@ -39,7 +85,18 @@ export function setSpeechRate(r: number) {
   rate = r;
 }
 
-export function speak(text: string, opts: { lang?: 'en' | 'he'; slow?: boolean } = {}): Promise<void> {
+export async function speak(text: string, opts: { lang?: 'en' | 'he'; slow?: boolean } = {}): Promise<void> {
+  const lang = opts.lang ?? 'en';
+  const file = lang === 'en' && naturalVoice ? AUDIO_FILES[audioKey(text)] : undefined;
+  if (file) {
+    // Recordings are made at a child-friendly pace; the parent setting scales around it.
+    const playbackRate = opts.slow ? 0.7 : Math.min(1.4, Math.max(0.6, rate / 0.85));
+    if (await playRecording(file, playbackRate)) return;
+  }
+  return speakTts(text, opts);
+}
+
+function speakTts(text: string, opts: { lang?: 'en' | 'he'; slow?: boolean }): Promise<void> {
   return new Promise((resolve) => {
     if (!canSpeak()) return resolve();
     const lang = opts.lang ?? 'en';
@@ -59,6 +116,11 @@ export function speak(text: string, opts: { lang?: 'en' | 'he'; slow?: boolean }
 }
 
 export function stopSpeaking() {
+  if (currentAudio) {
+    const a = currentAudio;
+    currentAudio = null;
+    a.pause();
+  }
   if (canSpeak()) speechSynthesis.cancel();
 }
 

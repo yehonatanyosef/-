@@ -3,6 +3,7 @@ import { COMPANIONS_BY_ID } from '../data/companions';
 import { sfx } from '../engine/sound';
 import { speak } from '../engine/speech';
 import type { Word } from '../types';
+import { Emoji } from './Emoji';
 
 /** Emoji picture (or a color swatch for color words). */
 export function Picture({ word, size = 72 }: { word: Word; size?: number }) {
@@ -16,11 +17,7 @@ export function Picture({ word, size = 72 }: { word: Word; size?: number }) {
       />
     );
   }
-  return (
-    <span className="emoji" style={{ fontSize: size }} role="img" aria-label={word.en}>
-      {word.emoji}
-    </span>
-  );
+  return <Emoji char={word.emoji} size={size} label={word.en} />;
 }
 
 export function SpeakButton({
@@ -109,7 +106,9 @@ export function Companion({ id, message, mood = 'idle' }: { id: string; message?
   const c = COMPANIONS_BY_ID[id] ?? COMPANIONS_BY_ID.owl;
   return (
     <div className={`companion mood-${mood}`}>
-      <span className="companion-emoji">{c.emoji}</span>
+      <span className="companion-emoji">
+        <Emoji char={c.emoji} size={54} label={c.name} />
+      </span>
       {message && <div className="bubble">{message}</div>}
     </div>
   );

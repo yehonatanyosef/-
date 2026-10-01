@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { BigButton, En, Picture, SpeakButton } from '../components/common';
+import { chipText, letterIntro, splitStory } from '../data/speakable';
 import { speak } from '../engine/speech';
 import type { ExProps } from './types';
+import { Emoji, EmojiScene } from '../components/Emoji';
 
 export function LearnWord({ ex, onAnswer }: ExProps<'learn-word'>) {
   return (
@@ -19,7 +21,7 @@ export function LearnWord({ ex, onAnswer }: ExProps<'learn-word'>) {
 }
 
 export function LearnLetter({ ex, onAnswer }: ExProps<'learn-letter'>) {
-  const say = `${ex.letter.say}. ${ex.letter.upper} is for ${ex.word.en}.`;
+  const say = letterIntro(ex.letter.say, ex.letter.upper, ex.word.en);
   return (
     <div className="ex learn">
       <div className="learn-card pop-in">
@@ -49,10 +51,10 @@ export function LearnSentence({ ex, onAnswer }: ExProps<'learn-sentence'>) {
     <div className="ex learn">
       <div className="learn-card pop-in">
         <span className="badge-new">משפט חדש ✨</span>
-        <span className="emoji scene">{ex.sentence.emoji}</span>
+        <EmojiScene text={ex.sentence.emoji} />
         <p className="sentence-big" dir="ltr">
           {words.map((w, i) => (
-            <button key={i} type="button" className="word-chip" onClick={() => void speak(w.replace(/[.,!?]/g, ''))}>
+            <button key={i} type="button" className="word-chip" onClick={() => void speak(chipText(w))}>
               {w}
             </button>
           ))}
@@ -68,11 +70,11 @@ export function LearnSentence({ ex, onAnswer }: ExProps<'learn-sentence'>) {
 
 export function ReadStory({ ex, hints, onAnswer }: ExProps<'read-story'>) {
   const [showHe, setShowHe] = useState(false);
-  const sentences = ex.story.en.match(/[^.!?]+[.!?]+["”]?/g) ?? [ex.story.en];
+  const sentences = splitStory(ex.story.en);
   return (
     <div className="ex learn">
       <div className="learn-card story-card pop-in">
-        <span className="story-emoji">{ex.story.emoji}</span>
+        <Emoji char={ex.story.emoji} size={72} />
         <h2 dir="ltr" className="en story-title">
           {ex.story.title}
         </h2>

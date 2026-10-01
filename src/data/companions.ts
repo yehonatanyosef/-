@@ -22,4 +22,4 @@ export const COMPANIONS: Companion[] = [
 
 export const COMPANIONS_BY_ID: Record<string, Companion> = Object.fromEntries(COMPANIONS.map((c) => [c.id, c]));
 
-export const AVATARS = ['🦸', '🧚', '🧙', '🥷', '👸', '🤴', '🧑‍🚀', '🦹', '🧜', '🐯', '🐵', '🐨'];
+export const AVATARS = ['🦁', '🐼', '🦊', '🥷', '👸', '🤴', '🧑‍🚀', '🐸', '🐰', '🐯', '🐵', '🐨'];

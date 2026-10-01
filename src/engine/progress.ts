@@ -94,11 +94,17 @@ export function isStageUnlocked(profile: Profile, stage: Stage): boolean {
   const islandIdx = ISLANDS.indexOf(island);
   if (stage.index === 0) {
     if (islandIdx === 0) return true;
-    return islandDone(profile, ISLANDS[islandIdx - 1]);
+    if (islandDone(profile, ISLANDS[islandIdx - 1])) return true;
+    // An island added in an update must not lock islands a child has already reached.
+    return ISLANDS.slice(islandIdx).some((i) => islandHasProgress(profile, i));
   }
   if (stageDone(profile, island.stages[stage.index - 1])) return true;
   if (stage.boss && profile.ability >= island.level + 1.2 && isStageUnlocked(profile, island.stages[0])) return true;
   return false;
+}
+
+function islandHasProgress(profile: Profile, island: Island): boolean {
+  return island.stages.some((s) => stageDone(profile, s) || profile.unlocked.includes(s.id));
 }
 
 export function isIslandUnlocked(profile: Profile, island: Island): boolean {
@@ -166,9 +172,10 @@ export function applyLesson(profile: Profile, outcome: LessonOutcome, now = Date
   const learnedBefore = new Set(Object.keys(items).filter((id) => isLearned(items[id])));
   for (const a of outcome.answers) {
     if (a.itemId) items[a.itemId] = review(items[a.itemId], a.correct, now);
-    if (a.first && a.skill && a.skill in skill) {
+    if (a.first && a.skill && (SKILLS as string[]).includes(a.skill)) {
       const s = a.skill as Skill;
-      skill[s] = skill[s] * 0.85 + (a.correct ? 1 : 0) * 0.15;
+      // Profiles created before a skill existed start it at the default.
+      skill[s] = (skill[s] ?? 0.7) * 0.85 + (a.correct ? 1 : 0) * 0.15;
       skillCount[s] = (skillCount[s] ?? 0) + 1;
     }
   }

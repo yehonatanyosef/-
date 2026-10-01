@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { BigButton, Companion, En, GoalRing, Modal } from '../components/common';
 import { COMPANIONS_BY_ID } from '../data/companions';
+import { GRAMMAR_BY_ID } from '../data/grammar';
 import { ISLANDS } from '../data/islands';
 import { LETTERS_BY_ID } from '../data/letters';
 import { SENTENCES_BY_ID } from '../data/sentences';
 import { STORIES_BY_ID } from '../data/stories';
+import { PHRASES_BY_ID } from '../data/talk';
 import { WORDS_BY_ID } from '../data/words';
 import { currentStage, isIslandUnlocked, isStageUnlocked, levelLabel, stageDone, todayXp } from '../engine/progress';
 import { sfx } from '../engine/sound';
 import { isDue } from '../engine/srs';
 import type { Profile, Settings, Stage } from '../types';
+import { Emoji } from '../components/Emoji';
 
 function preview(stage: Stage): string[] {
   return stage.itemIds.slice(0, 6).map((id) => {
@@ -17,6 +20,8 @@ function preview(stage: Stage): string[] {
     if (LETTERS_BY_ID[id]) return LETTERS_BY_ID[id].upper;
     if (SENTENCES_BY_ID[id]) return SENTENCES_BY_ID[id].emoji;
     if (STORIES_BY_ID[id]) return STORIES_BY_ID[id].emoji;
+    if (PHRASES_BY_ID[id]) return PHRASES_BY_ID[id].emoji;
+    if (GRAMMAR_BY_ID[id]) return GRAMMAR_BY_ID[id].emoji;
     return '❓';
   });
 }
@@ -62,7 +67,9 @@ export function MapScreen({
     <div className="screen map">
       <header className="map-header">
         <button type="button" className="avatar-btn" onClick={onSwitchProfile} title="החלפת שחקן">
-          <span className="avatar">{profile.avatar}</span>
+          <span className="avatar">
+            <Emoji char={profile.avatar} size={34} />
+          </span>
           <span className="who">
             <b>{profile.name}</b>
             <small>
@@ -100,7 +107,9 @@ export function MapScreen({
               style={{ '--island-a': island.colors[0], '--island-b': island.colors[1] } as CSSProperties}
             >
               <div className="island-banner">
-                <span className="island-emoji">{island.emoji}</span>
+                <span className="island-emoji">
+                  <Emoji char={island.emoji} size={44} />
+                </span>
                 <div>
                   <h2>{island.name}</h2>
                   <En className="island-en">{island.nameEn}</En>
@@ -120,7 +129,11 @@ export function MapScreen({
                   const offset = Math.sin(si * 1.15 + ii) * 34;
                   return (
                     <div key={stage.id} className="node-wrap" style={{ transform: `translateX(${offset}%)` }}>
-                      {isCurrent && <span className="node-companion">{companion.emoji}</span>}
+                      {isCurrent && (
+                        <span className="node-companion">
+                          <Emoji char={companion.emoji} size={40} />
+                        </span>
+                      )}
                       <button
                         ref={isCurrent ? currentRef : undefined}
                         type="button"
@@ -197,7 +210,9 @@ function StageSheet({ stage, profile, onClose, onPlay }: { stage: Stage; profile
     <Modal onClose={onClose}>
       <div className="sheet" style={{ '--island-a': island.colors[0], '--island-b': island.colors[1] } as CSSProperties}>
         <div className="sheet-head">
-          <span className="sheet-emoji">{stage.boss ? '👑' : island.emoji}</span>
+          <span className="sheet-emoji">
+            <Emoji char={stage.boss ? '👑' : island.emoji} size={60} />
+          </span>
           <h2>{stage.boss ? 'אתגר הבוס!' : `שלב ${stage.index + 1}`}</h2>
           <span>{island.name}</span>
         </div>

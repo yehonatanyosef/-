@@ -1,6 +1,6 @@
-export type Skill = 'vocab' | 'listening' | 'speaking' | 'reading' | 'spelling' | 'phonics';
+export type Skill = 'vocab' | 'listening' | 'speaking' | 'reading' | 'spelling' | 'phonics' | 'grammar' | 'conversation';
 
-export const SKILLS: Skill[] = ['vocab', 'listening', 'speaking', 'reading', 'spelling', 'phonics'];
+export const SKILLS: Skill[] = ['vocab', 'listening', 'speaking', 'reading', 'spelling', 'phonics', 'grammar', 'conversation'];
 
 /** A picturable vocabulary item. `level` is 1 (easiest) – 5. */
 export interface Word {
@@ -48,7 +48,7 @@ export interface Story {
   questions: StoryQuestion[];
 }
 
-export type IslandKind = 'letters' | 'words' | 'sentences' | 'stories';
+export type IslandKind = 'letters' | 'words' | 'talk' | 'grammar' | 'sentences' | 'stories';
 
 export interface Stage {
   id: string; // `${islandId}-${index}`
@@ -135,6 +135,8 @@ export interface Settings {
   speechRate: number;
   dailyGoal: number;
   hebrewHints: boolean;
+  /** Use the recorded natural voice (falls back to the device voice). */
+  naturalVoice: boolean;
 }
 
 export interface AppData {

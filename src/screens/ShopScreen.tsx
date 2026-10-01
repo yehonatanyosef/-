@@ -5,6 +5,7 @@ import { ACHIEVEMENTS, checkAchievements } from '../engine/achievements';
 import { burst } from '../engine/effects';
 import { sfx } from '../engine/sound';
 import type { Profile } from '../types';
+import { Emoji } from '../components/Emoji';
 
 export function ShopScreen({ profile, onUpdate, onBack }: { profile: Profile; onUpdate: (p: Profile) => void; onBack: () => void }) {
   const [msg, setMsg] = useState('בחרו חבר למסע! אוספים מטבעות בכל שלב 🪙');
@@ -40,7 +41,9 @@ export function ShopScreen({ profile, onUpdate, onBack }: { profile: Profile; on
           const active = profile.companion === c.id;
           return (
             <div key={c.id} className={`shop-item ${active ? 'active' : ''} ${owned ? 'owned' : ''}`}>
-              <span className="shop-emoji">{c.emoji}</span>
+              <span className="shop-emoji">
+                <Emoji char={c.emoji} size={60} />
+              </span>
               <b>{c.name}</b>
               {owned ? (
                 <BigButton color={active ? 'gray' : 'blue'} disabled={active} onClick={() => onUpdate({ ...profile, companion: c.id })}>

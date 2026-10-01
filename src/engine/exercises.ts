@@ -1,3 +1,6 @@
+import { grammarSentence, type GrammarItem, type GrammarRule } from '../data/grammar';
+import { LETTER_NAMES } from '../data/letters';
+import type { Phrase } from '../data/talk';
 import type { Letter, Sentence, Skill, Story, StoryQuestion, Word } from '../types';
 
 interface Base {
@@ -33,11 +36,16 @@ export type Exercise = Base &
     | { kind: 'sentence-picture'; sentence: Sentence; options: Sentence[] }
     | { kind: 'listen-sentence'; sentence: Sentence; options: Sentence[] }
     | { kind: 'story-question'; story: Story; question: StoryQuestion; options: string[] }
+    | { kind: 'learn-phrase'; phrase: Phrase }
+    | { kind: 'dialog-reply'; phrase: Phrase; options: string[]; audioOnly: boolean }
+    | { kind: 'say-reply'; phrase: Phrase }
+    | { kind: 'learn-rule'; rule: GrammarRule }
+    | { kind: 'grammar-choice'; item: GrammarItem; options: string[] }
   );
 
 export type ExerciseKind = Exercise['kind'];
 
-export const LEARN_KINDS: ExerciseKind[] = ['learn-word', 'learn-letter', 'learn-sentence', 'read-story'];
+export const LEARN_KINDS: ExerciseKind[] = ['learn-word', 'learn-letter', 'learn-sentence', 'read-story', 'learn-phrase', 'learn-rule'];
 
 export function isGraded(ex: Exercise): boolean {
   return !LEARN_KINDS.includes(ex.kind);
@@ -66,6 +74,11 @@ export const INSTRUCTIONS: Record<ExerciseKind, string> = {
   'sentence-picture': 'קראו את המשפט ובחרו תמונה',
   'listen-sentence': 'הקשיבו ובחרו את המשפט',
   'story-question': 'ענו על השאלה',
+  'learn-phrase': 'שיחה חדשה! הקשיבו לשאלה ולתשובה',
+  'dialog-reply': 'מה עונים?',
+  'say-reply': 'עכשיו אתם! ענו בקול',
+  'learn-rule': 'כלל חדש בדקדוק',
+  'grammar-choice': 'השלימו את המשפט',
 };
 
 /** Correct answer as text – shown to the child after a mistake. */
@@ -93,9 +106,21 @@ export function answerText(ex: Exercise): string {
       return ex.sentence.en;
     case 'story-question':
       return ex.question.answer;
+    case 'dialog-reply':
+    case 'say-reply':
+      return ex.phrase.reply;
+    case 'grammar-choice':
+      return grammarSentence(ex.item);
     default:
       return '';
   }
+}
+
+/** What to read aloud for the correct answer (letters are read by their name). */
+export function spokenAnswer(ex: Exercise): string {
+  if (ex.kind === 'letter-listen' || ex.kind === 'letter-case') return ex.letter.say;
+  if (ex.kind === 'first-letter') return LETTER_NAMES[ex.word.en[0].toUpperCase()];
+  return answerText(ex);
 }
 
 function trim<T>(options: T[], isAnswer: (o: T) => boolean, keep: number): T[] {
@@ -136,6 +161,14 @@ export function easier(ex: Exercise, uid: string): Exercise {
     }
     case 'story-question': {
       const a = base.question.answer;
+      return { ...base, options: trim(base.options, (o) => o === a, 2) };
+    }
+    case 'dialog-reply': {
+      const a = base.phrase.reply;
+      return { ...base, audioOnly: false, options: trim(base.options, (o) => o === a, 2) };
+    }
+    case 'grammar-choice': {
+      const a = base.item.answer;
       return { ...base, options: trim(base.options, (o) => o === a, 2) };
     }
     case 'spell-tiles': {

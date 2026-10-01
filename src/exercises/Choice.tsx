@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { En, Picture, SpeakButton } from '../components/common';
 import { speak } from '../engine/speech';
 import type { ExProps } from './types';
+import { EmojiScene } from '../components/Emoji';
 
 interface Option {
   key: string;
@@ -11,19 +12,23 @@ interface Option {
   say?: string;
 }
 
-function ChoiceGrid({
+export function ChoiceGrid({
   options,
   onAnswer,
+  onPick,
   layout = 'grid',
 }: {
   options: Option[];
   onAnswer: (correct: boolean) => void;
+  /** Called with the chosen option before grading. */
+  onPick?: (key: string) => void;
   layout?: 'grid' | 'list' | 'letters';
 }) {
   const [chosen, setChosen] = useState<string | null>(null);
   const choose = (o: Option) => {
     if (chosen) return;
     setChosen(o.key);
+    onPick?.(o.key);
     if (o.say) void speak(o.say);
     onAnswer(o.correct);
   };
@@ -222,7 +227,7 @@ export function SentencePicture({ ex, hints, onAnswer }: ExProps<'sentence-pictu
         options={ex.options.map((s) => ({
           key: s.id,
           correct: s.id === ex.sentence.id,
-          content: <span className="emoji scene">{s.emoji}</span>,
+          content: <EmojiScene text={s.emoji} size={48} />,
         }))}
       />
     </div>

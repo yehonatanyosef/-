@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_STAGES, ISLANDS, STAGES_BY_ID } from '../data/islands';
+import { GRAMMAR_BY_ID, grammarSentence } from '../data/grammar';
 import { LETTERS_BY_ID } from '../data/letters';
 import { SENTENCES_BY_ID } from '../data/sentences';
 import { STORIES_BY_ID } from '../data/stories';
+import { PHRASES_BY_ID } from '../data/talk';
 import { ALL_WORDS, WORDS_BY_ID } from '../data/words';
 import type { Profile } from '../types';
 import { answerText, easier, isGraded, type Exercise } from './exercises';
@@ -65,6 +67,14 @@ function assertValid(ex: Exercise) {
     case 'memory':
       expect(ex.words.length).toBeGreaterThanOrEqual(3);
       break;
+    case 'dialog-reply':
+      expect(ex.options.filter((o) => o === ex.phrase.reply)).toHaveLength(1);
+      expect(new Set(ex.options).size).toBe(ex.options.length);
+      break;
+    case 'grammar-choice':
+      expect(ex.options.filter((o) => o === ex.item.answer)).toHaveLength(1);
+      expect(grammarSentence(ex.item)).not.toContain('___');
+      break;
   }
   if (isGraded(ex) && ex.kind !== 'memory') expect(answerText(ex)).not.toBe('');
 }
@@ -77,7 +87,7 @@ describe('curriculum data', () => {
       for (const stage of island.stages) {
         expect(stage.itemIds.length).toBeGreaterThan(0);
         for (const id of stage.itemIds) {
-          expect(WORDS_BY_ID[id] || LETTERS_BY_ID[id] || SENTENCES_BY_ID[id] || STORIES_BY_ID[id]).toBeTruthy();
+          expect(WORDS_BY_ID[id] || LETTERS_BY_ID[id] || SENTENCES_BY_ID[id] || STORIES_BY_ID[id] || PHRASES_BY_ID[id] || GRAMMAR_BY_ID[id]).toBeTruthy();
         }
       }
     }
@@ -269,6 +279,31 @@ describe('progress & unlocking', () => {
     p = applyLesson(p, lesson, NOW + 4 * DAY).profile;
     expect(p.streak).toBe(1);
     expect(p.bestStreak).toBe(2);
+  });
+
+  it('an island added in an update does not lock islands the child already reached', () => {
+    // Child finished "colors" and played "food" before "talk" was added between them.
+    const p = createProfile('a', 8, '🦸', NOW);
+    const done = { stars: 2, bestAccuracy: 0.8, plays: 1 };
+    const stages = Object.fromEntries(
+      ['abc', 'animals', 'colors'].flatMap((id) => ISLANDS.find((i) => i.id === id)!.stages.map((s) => [s.id, done])),
+    );
+    const withFood = { ...p, stages: { ...stages, 'food-0': done } };
+    expect(isStageUnlocked(withFood, STAGES_BY_ID['talk-0'])).toBe(true);
+    expect(isStageUnlocked(withFood, STAGES_BY_ID['food-1'])).toBe(true);
+    expect(currentStage(withFood)?.id).toBe('food-1');
+    // A child who has not reached "food" yet must go through "talk" first.
+    expect(isStageUnlocked({ ...p, stages }, STAGES_BY_ID['food-0'])).toBe(false);
+  });
+
+  it('grammar stages each teach one rule, starting with an explanation', () => {
+    const p = { ...createProfile('a', 9, '🦸', NOW), ability: 3.5 };
+    const island = ISLANDS.find((i) => i.id === 'grammar')!;
+    for (const stage of island.stages.filter((s) => !s.boss)) {
+      expect(new Set(stage.itemIds.map((id) => GRAMMAR_BY_ID[id].rule)).size).toBe(1);
+      const lesson = generateStageLesson(stage, ctx(p));
+      expect(lesson[0].kind).toBe('learn-rule');
+    }
   });
 
   it('a strong learner can challenge the boss early', () => {

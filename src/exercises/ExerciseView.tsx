@@ -14,8 +14,10 @@ import {
   WordPickPicture,
 } from './Choice';
 import { LearnLetter, LearnSentence, LearnWord, ReadStory } from './Learn';
+import { GrammarChoice, LearnRule } from './Grammar';
 import { Memory } from './Memory';
 import { SaySentence, SayWord } from './Speak';
+import { DialogReply, LearnPhrase, SayReply } from './Talk';
 import type { Hints } from './types';
 
 export function ExerciseView(props: { ex: Exercise; hints: Hints; onAnswer: (c: boolean) => void; onSkip: () => void }) {
@@ -63,5 +65,20 @@ export function ExerciseView(props: { ex: Exercise; hints: Hints; onAnswer: (c: 
       return <ListenSentence ex={ex} {...rest} />;
     case 'story-question':
       return <StoryQuestion ex={ex} {...rest} />;
+    case 'learn-phrase':
+      return <LearnPhrase ex={ex} {...rest} />;
+    case 'dialog-reply':
+      return <DialogReply ex={ex} {...rest} />;
+    case 'say-reply':
+      return <SayReply ex={ex} {...rest} />;
+    case 'learn-rule':
+      return <LearnRule ex={ex} {...rest} />;
+    case 'grammar-choice':
+      return <GrammarChoice ex={ex} {...rest} />;
+    default: {
+      // Compile-time check that every exercise kind has a component.
+      const missing: never = ex;
+      return missing;
+    }
   }
 }

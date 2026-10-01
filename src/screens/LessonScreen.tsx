@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { BigButton, Companion, En, ProgressBar, SpeakButton } from '../components/common';
 import { ISLANDS_BY_ID, STAGES_BY_ID } from '../data/islands';
 import { burst } from '../engine/effects';
-import { answerText, easier, INSTRUCTIONS, isGraded, type Exercise } from '../engine/exercises';
+import { answerText, easier, INSTRUCTIONS, isGraded, spokenAnswer, type Exercise } from '../engine/exercises';
 import { generatePractice, generateStageLesson, nextUid } from '../engine/lessonGen';
 import { applyLesson, type AnswerLog, type LessonRewards } from '../engine/progress';
 import { pick } from '../engine/random';
@@ -60,7 +60,7 @@ export function LessonScreen({ profile, settings, stageId, onFinish, onExit, onR
   // Read instructions aloud in Hebrew for young children (if a Hebrew voice exists).
   useEffect(() => {
     if (!ex || profile.age > 6 || !hasHebrewVoice()) return;
-    if (['listen-pick', 'letter-listen', 'listen-sentence', 'learn-word', 'learn-letter', 'learn-sentence', 'read-story'].includes(ex.kind)) return;
+    if (['listen-pick', 'letter-listen', 'listen-sentence', 'learn-word', 'learn-letter', 'learn-sentence', 'read-story', 'learn-phrase', 'learn-rule', 'dialog-reply'].includes(ex.kind)) return;
     void speak(INSTRUCTIONS[ex.kind], { lang: 'he' });
   }, [ex, profile.age]);
 
@@ -178,7 +178,7 @@ export function LessonScreen({ profile, settings, stageId, onFinish, onExit, onR
               <strong dir="auto">{feedback.text}</strong>
               {!feedback.correct && feedback.answer && (
                 <div className="feedback-answer">
-                  התשובה הנכונה: <En>{feedback.answer}</En> {ex.kind !== 'first-letter' && <SpeakButton text={feedback.answer} size="sm" auto />}
+                  התשובה הנכונה: <En>{feedback.answer}</En> <SpeakButton text={spokenAnswer(ex)} size="sm" auto />
                 </div>
               )}
             </div>

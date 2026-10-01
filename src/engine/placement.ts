@@ -48,12 +48,19 @@ const RESULTS: Record<number, { level: number; ability: number }> = {
   5: { level: 5, ability: 4.3 },
 };
 
+/** Ages 4–5 who knew almost every word by ear (still pre-readers, so ability stays below 2.2). */
+const STRONG_LISTENER = { level: 2, ability: 1.6 };
+
 export interface PlacementState {
   tier: number;
   /** Highest step this age may normally be asked (spelling and sentences fit age 7+). */
   maxTier: number;
   /** Ages ≤ 6: harder steps are only a late bonus for children who answer almost everything. */
   young: boolean;
+  /** Ages 4–5 never go past listening (no letters at all); 6 may get the late bonus steps. */
+  bonus: boolean;
+  /** Ages 4–5 who got (almost) every listening question right. */
+  strongListener: boolean;
   correct: number; // at the current step
   wrong: number; // at the current step
   passed: number; // highest step passed (-1 = none)
@@ -78,7 +85,7 @@ export function maxTier(age: number): number {
   return age <= 6 ? 2 : TOP;
 }
 
-/** Ages ≤ 6: the first questions always stay on listening, letters and single words. */
+/** Ages ≤ 6: the first questions always stay on listening (4–5) or letters and single words (6). */
 export const YOUNG_EASY_QUESTIONS = 8;
 /** …and only a child with at most this many mistakes goes on to the harder steps afterwards. */
 const YOUNG_BONUS_MAX_MISTAKES = 1;
@@ -88,7 +95,7 @@ function mistakes(s: PlacementState): number {
 }
 
 export function startPlacement(age: number): PlacementState {
-  return { tier: startTier(age), maxTier: maxTier(age), young: age <= 6, correct: 0, wrong: 0, passed: -1, asked: 0, done: false, history: [], used: [] };
+  return { tier: startTier(age), maxTier: maxTier(age), young: age <= 6, bonus: age >= 6, strongListener: false, correct: 0, wrong: 0, passed: -1, asked: 0, done: false, history: [], used: [] };
 }
 
 export function answerPlacement(s: PlacementState, ex: Exercise, correct: boolean): PlacementState {
@@ -109,6 +116,9 @@ export function answerPlacement(s: PlacementState, ex: Exercise, correct: boolea
     else if (next.asked < YOUNG_EASY_QUESTIONS) {
       // A strong young child: a few more easy questions first, to be sure…
       Object.assign(next, { correct: 0, wrong: 0 });
+    } else if (!s.bonus) {
+      // Ages 4–5: no letters or reading at all – a strong listener just starts a bit higher.
+      Object.assign(next, { done: true, strongListener: true });
     } else {
       // …then the harder steps, late in the test, to find a truly high level.
       Object.assign(next, { tier: s.tier + 1, maxTier: TOP, correct: 0, wrong: 0 });
@@ -128,6 +138,7 @@ export function placementDone(s: PlacementState): boolean {
 
 export function placementResult(s: PlacementState): { level: number; ability: number; passed: number } {
   // Passing a step implies the easier steps below it.
+  if (s.strongListener && s.passed === 0) return { ...STRONG_LISTENER, passed: s.passed };
   return { ...RESULTS[s.passed], passed: s.passed };
 }
 

@@ -235,7 +235,7 @@ describe('placement test', () => {
   });
 
   it('a pre-reader who knows letters stays below the reading level', () => {
-    const r = run(5, (t) => t <= 1);
+    const r = run(6, (t) => t <= 1);
     expect(r.passed).toBe(1);
     expect(r.ability).toBeLessThan(1.6);
   });
@@ -276,6 +276,27 @@ describe('placement test', () => {
       }
   });
 
+  it('ages 4–5 never get letter questions in the test, even when they answer everything', () => {
+    const LETTER_KINDS = ['letter-listen', 'letter-case', 'first-letter', 'missing-letter', 'spell-tiles'];
+    for (const age of [4, 5])
+      for (let seed = 0; seed < 50; seed++) {
+        let n = 0;
+        for (const knows of [() => true, () => n++ % 9 !== 8, () => n++ % 2 === 0]) {
+          const r = run(age, knows, seed);
+          expect(r.asked.every((a) => a.tier === 0 && !LETTER_KINDS.includes(a.kind))).toBe(true);
+          expect(r.ability).toBeLessThan(2.2);
+        }
+      }
+    // A strong young listener starts a little higher, still as a pre-reader.
+    expect(run(5, () => true).level).toBe(2);
+  });
+
+  it('ages 4–5 get no letter exercises in reviews, even with old letter progress', () => {
+    const p = { ...createProfile('a', 4, '🦸', NOW), items: { 'letter-a': { box: 2, seen: 1, correct: 1, wrong: 0, due: NOW - 1, last: NOW - DAY } } };
+    for (let seed = 0; seed < 10; seed++)
+      for (const ex of generatePractice(ctx(p, seed))) expect(ex.kind.startsWith('letter')).toBe(false);
+  });
+
   it('ages 4–5 start the journey on the animals island, without letters', () => {
     for (const age of [4, 5]) {
       const r = run(age, (t) => t === 0);
@@ -289,8 +310,8 @@ describe('placement test', () => {
     expect(currentStage(createProfile('c', 4, '🦸', NOW))?.id).toBe('animals-0');
   });
 
-  it('ages 5–6: harder questions come only late, and only for children who answer almost everything', () => {
-    const strong = run(5, () => true);
+  it('age 6: harder questions come only late, and only for children who answer almost everything', () => {
+    const strong = run(6, () => true);
     const firstHard = strong.asked.findIndex((a) => a.tier > 2);
     expect(firstHard).toBeGreaterThanOrEqual(YOUNG_EASY_QUESTIONS);
     expect(strong.level).toBeGreaterThan(2);

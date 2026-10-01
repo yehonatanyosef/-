@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { BigButton, Companion, En } from '../components/common';
 import { InstallButton } from '../components/InstallButton';
+import { UpdateBanner } from '../components/UpdateBanner';
 import { AVATARS } from '../data/companions';
 import { levelLabel } from '../engine/progress';
 import type { Profile } from '../types';
@@ -26,6 +27,7 @@ export function ProfilesScreen({
           <En className="logo-en">English Island</En>
         </h1>
       </div>
+      <UpdateBanner />
       <Companion id="owl" message={profiles.length ? 'מי משחק היום?' : 'שלום! אני אולי הינשוף. בואו ניצור שחקן חדש!'} />
       <div className="profile-list">
         {profiles.map((p) => (

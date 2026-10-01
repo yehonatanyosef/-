@@ -50,8 +50,10 @@ const RESULTS: Record<number, { level: number; ability: number }> = {
 
 export interface PlacementState {
   tier: number;
-  /** Highest step this age may be asked (spelling and sentences fit age 7+). */
+  /** Highest step this age may normally be asked (spelling and sentences fit age 7+). */
   maxTier: number;
+  /** Ages ≤ 6: harder steps are only a late bonus for children who answer almost everything. */
+  young: boolean;
   correct: number; // at the current step
   wrong: number; // at the current step
   passed: number; // highest step passed (-1 = none)
@@ -67,13 +69,22 @@ export function startTier(age: number): number {
   return 2;
 }
 
-/** Under 7 the test stops after reading single words – no letter completion or sentences. */
+/** Under 7 the test normally stops after reading single words – no letter completion or sentences. */
 export function maxTier(age: number): number {
   return age <= 6 ? 2 : TOP;
 }
 
+/** Ages ≤ 6: the first questions always stay on listening, letters and single words. */
+export const YOUNG_EASY_QUESTIONS = 8;
+/** …and only a child with at most this many mistakes goes on to the harder steps afterwards. */
+const YOUNG_BONUS_MAX_MISTAKES = 1;
+
+function mistakes(s: PlacementState): number {
+  return s.history.filter((h) => !h.correct).length;
+}
+
 export function startPlacement(age: number): PlacementState {
-  return { tier: startTier(age), maxTier: maxTier(age), correct: 0, wrong: 0, passed: -1, asked: 0, done: false, history: [], used: [] };
+  return { tier: startTier(age), maxTier: maxTier(age), young: age <= 6, correct: 0, wrong: 0, passed: -1, asked: 0, done: false, history: [], used: [] };
 }
 
 export function answerPlacement(s: PlacementState, ex: Exercise, correct: boolean): PlacementState {
@@ -88,8 +99,16 @@ export function answerPlacement(s: PlacementState, ex: Exercise, correct: boolea
   if (next.correct >= PASS) {
     // Step passed – climb one step (never skip).
     next.passed = Math.max(next.passed, s.tier);
-    if (s.tier >= s.maxTier) next.done = true;
-    else Object.assign(next, { tier: s.tier + 1, correct: 0, wrong: 0 });
+    const strong = mistakes(next) <= YOUNG_BONUS_MAX_MISTAKES;
+    if (s.tier < s.maxTier) Object.assign(next, { tier: s.tier + 1, correct: 0, wrong: 0 });
+    else if (s.tier >= TOP || !s.young || !strong) next.done = true;
+    else if (next.asked < YOUNG_EASY_QUESTIONS) {
+      // A strong young child: a few more easy questions first, to be sure…
+      Object.assign(next, { correct: 0, wrong: 0 });
+    } else {
+      // …then the harder steps, late in the test, to find a truly high level.
+      Object.assign(next, { tier: s.tier + 1, maxTier: TOP, correct: 0, wrong: 0 });
+    }
   } else if (next.wrong >= FAIL) {
     // Started too high (older child) and nothing passed below yet – step down and try there.
     if (s.tier > 0 && next.passed < s.tier - 1) Object.assign(next, { tier: s.tier - 1, correct: 0, wrong: 0 });

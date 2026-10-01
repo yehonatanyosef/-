@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { CloudPanel } from '../components/CloudPanel';
 import { InstallButton } from '../components/InstallButton';
+import { APP_VERSION } from '../engine/updates';
 import { BigButton, En, Modal } from '../components/common';
 import type { CloudSync } from '../hooks/useCloudSync';
 import { ISLANDS } from '../data/islands';
@@ -340,6 +341,7 @@ export function ParentScreen({
         <p className="muted credits">
           קול: Kokoro (Apache-2.0) · איורים: Microsoft Fluent Emoji (MIT)
         </p>
+        <p className="muted version">גרסה: {APP_VERSION}</p>
         <p className="muted">{cloud.user ? 'הנתונים נשמרים במכשיר ובחשבון הענן.' : 'כל הנתונים נשמרים במכשיר זה בלבד.'}</p>
       </section>
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { BigButton, Companion, En, GoalRing, Modal } from '../components/common';
 import { COMPANIONS_BY_ID } from '../data/companions';
 import { GRAMMAR_BY_ID } from '../data/grammar';
+import { UpdateBanner } from '../components/UpdateBanner';
 import { favouriteIslands } from '../data/interests';
 import { islandSuitsAge, READING_AGE_LABEL } from '../engine/age';
 import { ISLANDS } from '../data/islands';
@@ -100,6 +101,7 @@ export function MapScreen({
       </header>
 
       <div className="map-scroll">
+        <UpdateBanner />
         <div className="map-greeting">
           <Companion id={profile.companion} message={`${greeting} ${xpToday >= settings.dailyGoal ? 'השלמתם את היעד היומי! 🎯' : ''}`} />
         </div>

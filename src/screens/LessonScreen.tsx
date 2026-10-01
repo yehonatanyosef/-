@@ -7,6 +7,7 @@ import { generatePractice, generateStageLesson, nextUid } from '../engine/lesson
 import { applyLesson, type AnswerLog, type LessonRewards } from '../engine/progress';
 import { pick } from '../engine/random';
 import { sfx } from '../engine/sound';
+import { setBusy } from '../engine/updates';
 import { canRecognize, hasHebrewVoice, speak, stopSpeaking } from '../engine/speech';
 import { ExerciseView } from '../exercises/ExerciseView';
 import type { Profile, Settings } from '../types';
@@ -65,6 +66,12 @@ export function LessonScreen({ profile, settings, stageId, onFinish, onExit, onR
   }, [ex, profile.age]);
 
   useEffect(() => () => stopSpeaking(), []);
+
+  // Never switch to a new app version in the middle of a lesson.
+  useEffect(() => {
+    setBusy(true);
+    return () => setBusy(false);
+  }, []);
 
   const finish = useCallback(
     (log: AnswerLog[]) => {

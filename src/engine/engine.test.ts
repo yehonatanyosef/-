@@ -221,7 +221,7 @@ describe('placement test', () => {
   });
 
   it('climbs one step at a time and never skips a step', () => {
-    const r = run(5, () => true);
+    const r = run(9, () => true);
     for (let i = 1; i < r.asked.length; i++) expect(r.asked[i].tier - r.asked[i - 1].tier).toBeLessThanOrEqual(1);
     expect(r.level).toBe(5);
   });
@@ -254,10 +254,67 @@ describe('placement test', () => {
     expect(words.every((w) => w.topic === 'animals')).toBe(true);
   });
 
+  it('children under 7 are never asked letter completion or sentences, even when they know everything', () => {
+    for (const age of [4, 5, 6]) {
+      const r = run(age, () => true);
+      expect(r.asked.every((a) => a.tier <= 2)).toBe(true);
+      expect(r.asked.some((a) => ['missing-letter', 'spell-tiles', 'sentence-picture', 'dialog-reply', 'grammar-choice', 'listen-sentence', 'story-question'].includes(a.kind))).toBe(false);
+      expect(r.level).toBe(2);
+    }
+  });
+
   it('never runs longer than the maximum', () => {
     let flip = false;
     const r = run(9, () => (flip = !flip));
     expect(r.asked.length).toBeLessThanOrEqual(MAX_QUESTIONS);
+  });
+});
+
+describe('age-appropriate content', () => {
+  const LETTER_WORK = ['missing-letter', 'spell-tiles', 'spell-type', 'first-letter'];
+  const SENTENCE_KINDS = ['sentence-picture', 'listen-sentence', 'sentence-build', 'say-sentence', 'dialog-reply', 'say-reply', 'grammar-choice', 'story-question'];
+  const wordStages = ALL_STAGES.filter((s) => ['abc', 'animals', 'colors', 'food', 'home', 'nature', 'body', 'actions'].includes(s.islandId));
+
+  it('under 7 (and 7 at a low level) lessons have no letter completion or sentence reading', () => {
+    for (const [age, ability] of [
+      [5, 2.5],
+      [6, 3.5],
+      [7, 2.0],
+    ]) {
+      const p = { ...createProfile('a', age, '🦸', NOW), ability };
+      for (const stage of wordStages)
+        for (let seed = 0; seed < 4; seed++)
+          for (const ex of generateStageLesson(stage, ctx(p, seed))) {
+            expect(LETTER_WORK).not.toContain(ex.kind);
+            expect(SENTENCE_KINDS).not.toContain(ex.kind);
+          }
+    }
+  });
+
+  it('letter completion is available from 8, or 7 at a good level', () => {
+    for (const [age, ability] of [
+      [8, 2.2],
+      [7, 3],
+    ]) {
+      const p = { ...createProfile('a', age, '🦸', NOW), ability };
+      const kinds = new Set<string>();
+      for (let seed = 0; seed < 30; seed++) generateStageLesson(STAGES_BY_ID['food-1'], ctx(p, seed)).forEach((e) => kinds.add(e.kind));
+      expect(LETTER_WORK.some((k) => kinds.has(k))).toBe(true);
+    }
+  });
+
+  it('sentence islands stay closed for young children and the path skips them', () => {
+    const done = { stars: 2, bestAccuracy: 0.8, plays: 1 };
+    const stages = Object.fromEntries(
+      ['abc', 'animals', 'colors'].flatMap((id) => ISLANDS.find((i) => i.id === id)!.stages.map((s) => [s.id, done])),
+    );
+    const six = { ...createProfile('a', 6, '🦸', NOW), ability: 3, stages };
+    expect(isStageUnlocked(six, STAGES_BY_ID['talk-0'])).toBe(false);
+    expect(isStageUnlocked(six, STAGES_BY_ID['food-0'])).toBe(true);
+    expect(currentStage(six)?.id).toBe('food-0');
+    const eight = { ...six, age: 8 };
+    expect(isStageUnlocked(eight, STAGES_BY_ID['talk-0'])).toBe(true);
+    expect(currentStage(eight)?.id).toBe('talk-0');
   });
 });
 

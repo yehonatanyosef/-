@@ -956,6 +956,57 @@ h2 {
 .choices-list .choice {
   min-height: 62px;
 }
+.choice-cell {
+  position: relative;
+  display: flex;
+}
+.choice-cell > .choice {
+  flex: 1;
+}
+.choice-cell.has-speak > .choice {
+  padding-inline-end: 58px;
+}
+.choices-letters .choice-cell.has-speak > .choice,
+.choices-grid .choice-cell.has-speak > .choice {
+  padding-inline-end: 12px;
+  padding-top: 30px;
+}
+.opt-speak {
+  position: absolute;
+  inset-inline-end: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #dbeafe;
+  box-shadow: 0 3px 0 #93c5fd;
+  font-size: 1.1rem;
+  display: grid;
+  place-items: center;
+  z-index: 1;
+}
+.choices-letters .opt-speak,
+.choices-grid .opt-speak {
+  top: 6px;
+  inset-inline-end: 6px;
+  transform: none;
+  width: 34px;
+  height: 34px;
+  font-size: 0.95rem;
+}
+.opt-speak:active {
+  transform: translateY(calc(-50% + 2px));
+  box-shadow: 0 1px 0 #93c5fd;
+}
+.choices-letters .opt-speak:active,
+.choices-grid .opt-speak:active {
+  transform: translateY(2px);
+}
+.opt-speak.playing {
+  background: var(--blue);
+  animation: wobble 0.6s ease-in-out infinite;
+}
 .choice:active:not(:disabled) {
   transform: translateY(4px);
   box-shadow: 0 1px 0 #cbd5e1;
@@ -1884,6 +1935,10 @@ h2 {
   flex-direction: column;
   gap: 6px;
   font-weight: 600;
+}
+.age-edit {
+  margin-bottom: 14px;
+  font-size: 0.95rem;
 }
 .actions .big-btn {
   font-size: 1rem;

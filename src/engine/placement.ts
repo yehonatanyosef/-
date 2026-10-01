@@ -50,6 +50,8 @@ const RESULTS: Record<number, { level: number; ability: number }> = {
 
 export interface PlacementState {
   tier: number;
+  /** Highest step this age may be asked (spelling and sentences fit age 7+). */
+  maxTier: number;
   correct: number; // at the current step
   wrong: number; // at the current step
   passed: number; // highest step passed (-1 = none)
@@ -65,8 +67,13 @@ export function startTier(age: number): number {
   return 2;
 }
 
+/** Under 7 the test stops after reading single words – no letter completion or sentences. */
+export function maxTier(age: number): number {
+  return age <= 6 ? 2 : TOP;
+}
+
 export function startPlacement(age: number): PlacementState {
-  return { tier: startTier(age), correct: 0, wrong: 0, passed: -1, asked: 0, done: false, history: [], used: [] };
+  return { tier: startTier(age), maxTier: maxTier(age), correct: 0, wrong: 0, passed: -1, asked: 0, done: false, history: [], used: [] };
 }
 
 export function answerPlacement(s: PlacementState, ex: Exercise, correct: boolean): PlacementState {
@@ -81,7 +88,7 @@ export function answerPlacement(s: PlacementState, ex: Exercise, correct: boolea
   if (next.correct >= PASS) {
     // Step passed – climb one step (never skip).
     next.passed = Math.max(next.passed, s.tier);
-    if (s.tier >= TOP) next.done = true;
+    if (s.tier >= s.maxTier) next.done = true;
     else Object.assign(next, { tier: s.tier + 1, correct: 0, wrong: 0 });
   } else if (next.wrong >= FAIL) {
     // Started too high (older child) and nothing passed below yet – step down and try there.

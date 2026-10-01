@@ -1,5 +1,6 @@
 import { GRAMMAR_BY_ID, grammarSentence, RULES_BY_ID, type GrammarItem } from '../data/grammar';
 import { favouriteIslands } from '../data/interests';
+import { canReadSentences } from './age';
 import { ISLANDS, ISLANDS_BY_ID } from '../data/islands';
 import { LETTERS, LETTERS_BY_ID } from '../data/letters';
 import { SENTENCES, SENTENCES_BY_ID } from '../data/sentences';
@@ -125,15 +126,17 @@ function wordKindWeights(word: Word, ctx: GenContext): { value: ExerciseKind; we
   const len = word.en.length;
   const spellable = isSpellable(word);
   const preReader = isPreReader(ctx);
+  // Completing letters fits age 8+, or 7 at a good level.
+  const letterWork = spellable && canReadSentences(ctx.profile);
   return withPrefs<ExerciseKind>([
     { value: 'listen-pick', weight: a < 2.5 ? 3 : 2 },
     { value: 'word-pick-picture', weight: preReader ? 0 : a >= 1.6 ? 2 : 0.6 },
     { value: 'picture-pick-word', weight: a >= 2 ? 2 : 0 },
     { value: 'translate-pick', weight: a >= 2.5 && age >= 7 ? 1.2 : 0 },
-    { value: 'first-letter', weight: spellable ? (a < 3.2 ? 1.5 : 0.4) : 0 },
-    { value: 'missing-letter', weight: spellable && a >= 2 && len >= 3 ? 1.8 : 0 },
-    { value: 'spell-tiles', weight: spellable && !preReader && len <= maxSpellLength(a) ? (a >= 2.3 ? 2.2 : 1) : 0 },
-    { value: 'spell-type', weight: spellable && a >= 3.8 && age >= 7 ? 1.5 : 0 },
+    { value: 'first-letter', weight: letterWork ? (a < 3.2 ? 1.5 : 0.4) : 0 },
+    { value: 'missing-letter', weight: letterWork && a >= 2 && len >= 3 ? 1.8 : 0 },
+    { value: 'spell-tiles', weight: letterWork && !preReader && len <= maxSpellLength(a) ? (a >= 2.3 ? 2.2 : 1) : 0 },
+    { value: 'spell-type', weight: letterWork && a >= 3.8 && age >= 7 ? 1.5 : 0 },
     { value: 'say-word', weight: ctx.speaking ? 1.4 : 0 },
   ], ctx);
 }
@@ -200,7 +203,7 @@ function letterExercises(letter: Letter, count: number, ctx: GenContext): Exerci
     [
       'letter-listen',
       a >= 1.4 ? 'letter-case' : 'letter-listen',
-      startsWith ? 'first-letter' : 'letter-case',
+      startsWith && canReadSentences(ctx.profile) ? 'first-letter' : 'letter-case',
       'listen-pick',
     ] as ExerciseKind[],
     ctx.rng,

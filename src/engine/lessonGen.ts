@@ -1,6 +1,6 @@
 import { GRAMMAR_BY_ID, grammarSentence, RULES_BY_ID, type GrammarItem } from '../data/grammar';
 import { favouriteIslands } from '../data/interests';
-import { canReadSentences } from './age';
+import { canReadSentences, LETTERS_MIN_AGE } from './age';
 import { ISLANDS, ISLANDS_BY_ID } from '../data/islands';
 import { LETTERS, LETTERS_BY_ID } from '../data/letters';
 import { SENTENCES, SENTENCES_BY_ID } from '../data/sentences';
@@ -314,7 +314,11 @@ export function reviewExercise(itemId: string, ctx: GenContext): Exercise | null
     const word = WORDS_BY_ID[itemId];
     return wordExercises(word, 1, ctx, ['say-word'])[0];
   }
-  if (LETTERS_BY_ID[itemId]) return letterExercises(LETTERS_BY_ID[itemId], 1, ctx)[0];
+  if (LETTERS_BY_ID[itemId]) {
+    // Under 6 there is no letter work – practise the letter's picture word by ear instead.
+    if (ctx.profile.age < LETTERS_MIN_AGE) return buildWordExercise('listen-pick', WORDS_BY_ID[LETTERS_BY_ID[itemId].wordId], ctx);
+    return letterExercises(LETTERS_BY_ID[itemId], 1, ctx)[0];
+  }
   if (SENTENCES_BY_ID[itemId]) return sentenceExercises(SENTENCES_BY_ID[itemId], 1, ctx)[0];
   if (PHRASES_BY_ID[itemId]) return talkExercises(PHRASES_BY_ID[itemId], 1, ctx, ['say-reply'])[0] ?? null;
   if (GRAMMAR_BY_ID[itemId]) return grammarExercises(GRAMMAR_BY_ID[itemId], 1, ctx)[0];

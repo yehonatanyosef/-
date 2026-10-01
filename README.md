@@ -51,17 +51,17 @@ npm test         # בדיקות יחידה למנוע
 הקבצים כבר נמצאים בתיקיות `public/audio` ו-`public/img`. כשמוסיפים תוכן חדש, מייצרים קבצים רק לתוכן החדש:
 
 ```bash
-pip install piper-tts emoji pillow
-npm run audio:texts && python3 scripts/generate-audio.py --model en_US-joe-medium.onnx
+pip install sherpa-onnx emoji pillow
+npm run audio:texts && python3 scripts/generate-audio.py --kokoro kokoro-multi-lang-v1_0
 npm run images:list && python3 scripts/fetch-images.py
 ```
 
 `npm test` נכשל אם חסרה הקלטה או איור לתוכן כלשהו, כך שאי אפשר לשכוח.
-את מודל הקול אפשר להשיג בעזרת `npm pack vowel-lab-voices-float` (הקובץ `float.onnx`).
+את מודל הקול מורידים מ-[sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-multi-lang-v1_0.tar.bz2) ופורסים את הקובץ.
 
 ## קרדיטים
 
-- הקול: Piper TTS, הקול `en_US-joe-medium` (רישיון CC0).
+- הקול: Kokoro v1.0, הקול `af_bella` (רישיון Apache-2.0), שהופעל באמצעות sherpa-onnx.
 - האיורים: [Microsoft Fluent Emoji](https://github.com/microsoft/fluentui-emoji) (רישיון MIT).
 
 ## גיבוי וסנכרון בענן

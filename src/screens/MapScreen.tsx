@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { BigButton, Companion, En, GoalRing, Modal } from '../components/common';
 import { COMPANIONS_BY_ID } from '../data/companions';
 import { GRAMMAR_BY_ID } from '../data/grammar';
+import { favouriteIslands } from '../data/interests';
 import { ISLANDS } from '../data/islands';
 import { LETTERS_BY_ID } from '../data/letters';
 import { SENTENCES_BY_ID } from '../data/sentences';
@@ -36,6 +37,7 @@ export function MapScreen({
   onShop,
   onAchievements,
   onParents,
+  onInterests,
   onSwitchProfile,
 }: {
   profile: Profile;
@@ -45,6 +47,7 @@ export function MapScreen({
   onShop: () => void;
   onAchievements: () => void;
   onParents: () => void;
+  onInterests: () => void;
   onSwitchProfile: () => void;
 }) {
   const [selected, setSelected] = useState<Stage | null>(null);
@@ -53,6 +56,8 @@ export function MapScreen({
   const greeting = useMemo(() => GREETINGS[Math.floor(Math.random() * GREETINGS.length)], []);
   const companion = COMPANIONS_BY_ID[profile.companion] ?? COMPANIONS_BY_ID.owl;
 
+  const favourites = favouriteIslands(profile.interests);
+  const lessonsPlayed = Object.values(profile.activity).reduce((n, d) => n + d.lessons, 0);
   const totalStars = Object.values(profile.stages).reduce((s, r) => s + r.stars, 0);
   const now = Date.now();
   const dueCount = Object.values(profile.items).filter((p) => isDue(p, now)).length;
@@ -97,13 +102,19 @@ export function MapScreen({
         <div className="map-greeting">
           <Companion id={profile.companion} message={`${greeting} ${xpToday >= settings.dailyGoal ? 'השלמתם את היעד היומי! 🎯' : ''}`} />
         </div>
+        {!profile.interests && lessonsPlayed >= 2 && (
+          <button type="button" className="interest-prompt pop-in" onClick={onInterests}>
+            💖 ספרו לי מה אתם הכי אוהבים, ואתאים את המשחק בשבילכם!
+          </button>
+        )}
         {ISLANDS.map((island, ii) => {
           const unlocked = isIslandUnlocked(profile, island);
           const starsHere = island.stages.reduce((s, st) => s + (profile.stages[st.id]?.stars ?? 0), 0);
+          const favourite = favourites.includes(island.id);
           return (
             <section
               key={island.id}
-              className={`island ${unlocked ? '' : 'locked'}`}
+              className={`island ${unlocked ? '' : 'locked'} ${favourite ? 'favourite' : ''}`}
               style={{ '--island-a': island.colors[0], '--island-b': island.colors[1] } as CSSProperties}
             >
               <div className="island-banner">
@@ -111,14 +122,21 @@ export function MapScreen({
                   <Emoji char={island.emoji} size={44} />
                 </span>
                 <div>
-                  <h2>{island.name}</h2>
+                  <h2>
+                    {island.name} {favourite && <span title="אחד הנושאים שאתם הכי אוהבים">💖</span>}
+                  </h2>
                   <En className="island-en">{island.nameEn}</En>
                 </div>
                 <span className="island-stars">
                   {unlocked ? `⭐ ${starsHere}/${island.stages.length * 3}` : '🔒'}
                 </span>
               </div>
-              {!unlocked && <p className="island-lock-msg">נפתח אחרי ניצחון על הבוס של {ISLANDS[ii - 1]?.name}</p>}
+              {!unlocked && (
+                <p className="island-lock-msg">
+                  {favourite ? '💖 נושא שאתם אוהבים! ייפתח מוקדם כשתתחזקו עוד קצת, או אחרי ' : 'נפתח אחרי ניצחון על הבוס של '}
+                  {ISLANDS[ii - 1]?.name}
+                </p>
+              )}
               <div className="path">
                 {island.stages.map((stage, si) => {
                   const open = isStageUnlocked(profile, stage);
@@ -180,6 +198,10 @@ export function MapScreen({
         <button type="button" onClick={onAchievements}>
           <span>🏆</span>
           <small>הישגים</small>
+        </button>
+        <button type="button" onClick={onInterests}>
+          <span>💖</span>
+          <small>אני אוהב</small>
         </button>
         <button type="button" onClick={onParents}>
           <span>👨‍👩‍👧</span>

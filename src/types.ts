@@ -1,3 +1,5 @@
+import type { Interests } from './data/interests';
+
 export type Skill = 'vocab' | 'listening' | 'speaking' | 'reading' | 'spelling' | 'phonics' | 'grammar' | 'conversation';
 
 export const SKILLS: Skill[] = ['vocab', 'listening', 'speaking', 'reading', 'spelling', 'phonics', 'grammar', 'conversation'];
@@ -127,6 +129,8 @@ export interface Profile {
   updatedAt?: number;
   /** Set when a parent resets progress – older copies must not bring it back. */
   resetAt?: number;
+  /** What the child said they love (topics and kinds of games). */
+  interests?: Interests;
 }
 
 export interface Settings {

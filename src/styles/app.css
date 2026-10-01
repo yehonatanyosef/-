@@ -726,7 +726,7 @@ h2 {
   transform: translateX(-50%);
   width: min(640px, 100%);
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   background: white;
   border-radius: 24px 24px 0 0;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
@@ -1415,6 +1415,114 @@ h2 {
   font-weight: 800;
   color: white;
   box-shadow: 0 5px 0 #b45309;
+}
+
+/* ---------- Interests ---------- */
+
+.interests {
+  padding-bottom: 40px;
+}
+.interest-title {
+  font-size: 1.3rem;
+  margin: 6px 0 0;
+}
+.interest-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.interest {
+  position: relative;
+  background: white;
+  border-radius: 20px;
+  padding: 12px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  box-shadow: 0 4px 0 #cbd5e1;
+  border: 3px solid transparent;
+  transition: transform 0.15s, background 0.2s;
+}
+.interest:active {
+  transform: scale(0.95);
+}
+.interest.on {
+  background: #fdf2f8;
+  border-color: #ec4899;
+  box-shadow: 0 4px 0 #be185d;
+  transform: translateY(-2px);
+}
+.interest .heart {
+  position: absolute;
+  top: -8px;
+  inset-inline-end: -6px;
+  font-style: normal;
+  font-size: 1.4rem;
+  animation: pop-in 0.3s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.interest-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.interest-prompt {
+  display: block;
+  width: 100%;
+  margin-bottom: 18px;
+  padding: 14px;
+  border-radius: 20px;
+  background: linear-gradient(90deg, #fbcfe8, #f9a8d4);
+  font-weight: 700;
+  font-size: 1.05rem;
+  box-shadow: var(--shadow);
+}
+.island.favourite {
+  box-shadow: 0 0 0 4px #f472b6, 0 10px 0 rgba(0, 0, 0, 0.1), 0 18px 30px rgba(15, 23, 42, 0.12);
+}
+
+/* ---------- Level-test ladder ---------- */
+
+.ladder {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  width: 100%;
+}
+.rung {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 2px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.6);
+  opacity: 0.45;
+  filter: grayscale(0.8);
+  transition: all 0.3s;
+}
+.rung small {
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.15;
+}
+.rung.passed {
+  opacity: 1;
+  filter: none;
+  background: #dcfce7;
+}
+.rung.now {
+  opacity: 1;
+  filter: none;
+  background: #fef9c3;
+  box-shadow: 0 0 0 3px var(--gold);
+  transform: translateY(-3px);
 }
 
 /* ---------- Result ---------- */

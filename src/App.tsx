@@ -8,6 +8,7 @@ import { useCloudSync } from './hooks/useCloudSync';
 import { LessonScreen } from './screens/LessonScreen';
 import { MapScreen } from './screens/MapScreen';
 import { ParentScreen } from './screens/ParentScreen';
+import { InterestsScreen } from './screens/InterestsScreen';
 import { PlacementScreen } from './screens/PlacementScreen';
 import { NewProfileScreen, ProfilesScreen } from './screens/ProfilesScreen';
 import { AchievementsScreen, ShopScreen } from './screens/ShopScreen';
@@ -17,6 +18,7 @@ type Screen =
   | { name: 'profiles' }
   | { name: 'new-profile' }
   | { name: 'placement' }
+  | { name: 'interests'; next: 'placement' | 'map' }
   | { name: 'map' }
   | { name: 'lesson'; stageId: string | null; run: number }
   | { name: 'shop' }
@@ -50,7 +52,7 @@ export default function App() {
   // Guard against screens that need a profile (or a finished placement test).
   let view: Screen = screen;
   if (!profile && !['profiles', 'new-profile', 'parents'].includes(screen.name)) view = { name: 'profiles' };
-  else if (profile && !profile.placementDone && view.name !== 'parents') view = { name: 'placement' };
+  else if (profile && !profile.placementDone && view.name !== 'parents' && view.name !== 'interests') view = { name: 'placement' };
   if (view.name === 'profiles' && data.profiles.length === 0) view = { name: 'new-profile' };
 
   switch (view.name) {
@@ -76,7 +78,8 @@ export default function App() {
           onCreate={(name, age, avatar) => {
             const p = createProfile(name, age, avatar);
             setData((d) => ({ ...d, profiles: [...d.profiles, p], activeProfileId: p.id }));
-            setScreen({ name: 'placement' });
+            // Ask what the child loves first – the level test uses it to pick familiar words.
+            setScreen({ name: 'interests', next: 'placement' });
           }}
         />
       );
@@ -95,6 +98,19 @@ export default function App() {
             updateProfile(applyPlacement(profile, 1, profile.ability));
             goHome();
           }}
+        />
+      );
+
+    case 'interests':
+      if (!profile) return null;
+      return (
+        <InterestsScreen
+          profile={profile}
+          onSave={(interests) => {
+            updateProfile({ ...profile, interests });
+            setScreen(view.next === 'map' ? { name: 'map' } : { name: 'placement' });
+          }}
+          onSkip={() => setScreen(view.next === 'map' ? { name: 'map' } : { name: 'placement' })}
         />
       );
 
@@ -169,6 +185,7 @@ export default function App() {
           onShop={() => setScreen({ name: 'shop' })}
           onAchievements={() => setScreen({ name: 'achievements' })}
           onParents={() => setScreen({ name: 'parents' })}
+          onInterests={() => setScreen({ name: 'interests', next: 'map' })}
           onSwitchProfile={() => setScreen({ name: 'profiles' })}
         />
       );

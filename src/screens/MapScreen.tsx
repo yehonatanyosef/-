@@ -4,7 +4,7 @@ import { COMPANIONS_BY_ID } from '../data/companions';
 import { GRAMMAR_BY_ID } from '../data/grammar';
 import { UpdateBanner } from '../components/UpdateBanner';
 import { favouriteIslands } from '../data/interests';
-import { islandSuitsAge, READING_AGE_LABEL } from '../engine/age';
+import { islandAgeMessage, islandSuitsAge } from '../engine/age';
 import { ISLANDS } from '../data/islands';
 import { LETTERS_BY_ID } from '../data/letters';
 import { SENTENCES_BY_ID } from '../data/sentences';
@@ -117,7 +117,7 @@ export function MapScreen({
           return (
             <section
               key={island.id}
-              className={`island ${unlocked ? '' : 'locked'} ${favourite ? 'favourite' : ''}`}
+              className={`island ${unlocked ? '' : 'locked'} ${favourite ? 'favourite' : ''} ${islandSuitsAge(profile, island) ? '' : 'too-young'}`}
               style={{ '--island-a': island.colors[0], '--island-b': island.colors[1] } as CSSProperties}
             >
               <div className="island-banner">
@@ -135,7 +135,7 @@ export function MapScreen({
                 </span>
               </div>
               {!unlocked && !islandSuitsAge(profile, island) && (
-                <p className="island-lock-msg">📚 כאן קוראים משפטים – האי ייפתח {READING_AGE_LABEL}</p>
+                <p className="island-lock-msg">{islandAgeMessage(island)}</p>
               )}
               {!unlocked && islandSuitsAge(profile, island) && (
                 <p className="island-lock-msg">
@@ -143,6 +143,8 @@ export function MapScreen({
                   {ISLANDS[ii - 1]?.name}
                 </p>
               )}
+              {/* An island the child is too young for shows only its title and when it opens. */}
+              {islandSuitsAge(profile, island) && (
               <div className="path">
                 {island.stages.map((stage, si) => {
                   const open = isStageUnlocked(profile, stage);
@@ -185,6 +187,7 @@ export function MapScreen({
                   );
                 })}
               </div>
+              )}
             </section>
           );
         })}

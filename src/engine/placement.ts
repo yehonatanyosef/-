@@ -69,8 +69,12 @@ export function startTier(age: number): number {
   return 2;
 }
 
-/** Under 7 the test normally stops after reading single words – no letter completion or sentences. */
+/**
+ * Normal ceiling of the test by age: 4–5 only listen and point (no letters yet),
+ * 6 goes up to reading single words, 7+ the whole ladder.
+ */
 export function maxTier(age: number): number {
+  if (age <= 5) return 0;
   return age <= 6 ? 2 : TOP;
 }
 

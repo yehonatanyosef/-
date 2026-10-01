@@ -5,14 +5,16 @@ import { celebrate } from '../engine/effects';
 import { INSTRUCTIONS } from '../engine/exercises';
 import {
   answerPlacement,
-  PLACEMENT_QUESTIONS,
   placementDone,
   placementQuestion,
   placementResult,
   startPlacement,
+  TIERS,
 } from '../engine/placement';
 import { levelLabel } from '../engine/progress';
 import { sfx } from '../engine/sound';
+import { hasHebrewVoice, speak } from '../engine/speech';
+import { Emoji } from '../components/Emoji';
 import { ExerciseView } from '../exercises/ExerciseView';
 import type { Profile } from '../types';
 
@@ -33,6 +35,13 @@ export function PlacementScreen({
     // a new question only when the number of answered questions changes
     [state.asked],
   );
+
+  // Young children may not read Hebrew yet – read the instruction aloud (when the device has a Hebrew voice).
+  useEffect(() => {
+    if (phase !== 'test' || !question || profile.age > 6 || !hasHebrewVoice()) return;
+    if (question.kind === 'listen-pick' || question.kind === 'letter-listen' || question.kind === 'listen-sentence') return;
+    void speak(INSTRUCTIONS[question.kind], { lang: 'he' });
+  }, [phase, question, profile.age]);
 
   const submit = useCallback(
     (correct: boolean) => {
@@ -61,8 +70,9 @@ export function PlacementScreen({
       <div className="screen center placement">
         <Companion
           id={profile.companion}
-          message={`היי ${profile.name}! לפני שמתחילים, בואו נשחק משחק קצר כדי שאדע מה כבר יודעים. זה בסדר גמור לא לדעת — פשוט לוחצים "לא יודע/ת" 😊`}
+          message={`היי ${profile.name}! לפני שמתחילים, בואו נשחק משחק קצר כדי שאדע מה כבר יודעים. מתחילים בקל ומתקדמים לאט לאט. זה בסדר גמור לא לדעת — פשוט לוחצים "לא יודע/ת" 😊`}
         />
+        <Ladder tier={-1} passed={-1} />
         <BigButton onClick={() => setPhase('test')} className="pulse">
           בואו נתחיל! 🎮
         </BigButton>
@@ -74,7 +84,7 @@ export function PlacementScreen({
   }
 
   if (phase === 'result') {
-    const { level, ability } = placementResult(state);
+    const { level, ability, passed } = placementResult(state);
     const island = ISLANDS[startIslandIndex(level)];
     const label = levelLabel(ability);
     return (
@@ -87,6 +97,7 @@ export function PlacementScreen({
             <small dir="ltr">{label.cefr}</small>
           </div>
         </div>
+        <Ladder tier={-1} passed={passed} />
         <Companion
           id={profile.companion}
           mood="happy"
@@ -102,11 +113,7 @@ export function PlacementScreen({
   if (!question) return null;
   return (
     <div className="screen lesson placement-test">
-      <div className="placement-dots">
-        {Array.from({ length: PLACEMENT_QUESTIONS }).map((_, i) => (
-          <span key={i} className={i < state.asked ? 'done' : i === state.asked ? 'now' : ''} />
-        ))}
-      </div>
+      <Ladder tier={state.tier} passed={state.passed} />
       <div className="instruction">{INSTRUCTIONS[question.kind]}</div>
       <div className={`exercise-wrap ${answered ? 'fade' : ''}`} key={question.uid}>
         <ExerciseView ex={question} hints={{ hebrew: false, autoAudio: true }} onAnswer={submit} onSkip={() => submit(false)} />
@@ -114,6 +121,20 @@ export function PlacementScreen({
       <button type="button" className="dont-know" onClick={() => submit(false)} disabled={answered}>
         🤷 לא יודע/ת
       </button>
+    </div>
+  );
+}
+
+/** The steps of the level test, showing which ones were passed and the current one. */
+function Ladder({ tier, passed }: { tier: number; passed: number }) {
+  return (
+    <div className="ladder" aria-label="שלבי הבדיקה">
+      {TIERS.map((t, i) => (
+        <div key={i} className={`rung ${i <= passed ? 'passed' : ''} ${i === tier ? 'now' : ''}`} title={t.label}>
+          <Emoji char={t.emoji} size={28} />
+          <small>{t.label}</small>
+        </div>
+      ))}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { favouriteIslands } from '../data/interests';
 import { ISLANDS, ISLANDS_BY_ID, startIslandIndex } from '../data/islands';
 import { LETTERS } from '../data/letters';
 import { WORDS_BY_ID } from '../data/words';
@@ -95,12 +96,19 @@ export function isStageUnlocked(profile: Profile, stage: Stage): boolean {
   if (stage.index === 0) {
     if (islandIdx === 0) return true;
     if (islandDone(profile, ISLANDS[islandIdx - 1])) return true;
+    // A favourite topic opens early once the child is ready for its level.
+    if (isFavouriteOpenEarly(profile, island)) return true;
     // An island added in an update must not lock islands a child has already reached.
     return ISLANDS.slice(islandIdx).some((i) => islandHasProgress(profile, i));
   }
   if (stageDone(profile, island.stages[stage.index - 1])) return true;
   if (stage.boss && profile.ability >= island.level + 1.2 && isStageUnlocked(profile, island.stages[0])) return true;
   return false;
+}
+
+/** Favourite islands open as soon as the child's level reaches the island's level. */
+export function isFavouriteOpenEarly(profile: Profile, island: Island): boolean {
+  return profile.placementDone && favouriteIslands(profile.interests).includes(island.id) && profile.ability >= island.level;
 }
 
 function islandHasProgress(profile: Profile, island: Island): boolean {
@@ -116,6 +124,9 @@ export function currentStage(profile: Profile): Stage | null {
   for (let i = ISLANDS.length - 1; i >= 0; i--) {
     const island = ISLANDS[i];
     if (!isIslandUnlocked(profile, island)) continue;
+    // A favourite island opened early is a bonus – the journey continues on the main path.
+    const prevDone = i === 0 || islandDone(profile, ISLANDS[i - 1]);
+    if (!prevDone && isFavouriteOpenEarly(profile, island) && !islandHasProgress(profile, island)) continue;
     const next = island.stages.find((s) => isStageUnlocked(profile, s) && !stageDone(profile, s));
     if (next) return next;
     if (islandDone(profile, island)) return null;

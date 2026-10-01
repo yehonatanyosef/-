@@ -109,7 +109,11 @@ export function Companion({ id, message, mood = 'idle' }: { id: string; message?
       <span className="companion-emoji">
         <Emoji char={c.emoji} size={54} label={c.name} />
       </span>
-      {message && <div className="bubble">{message}</div>}
+      {message && (
+        <div className="bubble" dir="auto">
+          {message}
+        </div>
+      )}
     </div>
   );
 }

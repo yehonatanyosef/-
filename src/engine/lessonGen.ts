@@ -1,4 +1,5 @@
 import { GRAMMAR_BY_ID, grammarSentence, RULES_BY_ID, type GrammarItem } from '../data/grammar';
+import { favouriteIslands } from '../data/interests';
 import { ISLANDS, ISLANDS_BY_ID } from '../data/islands';
 import { LETTERS, LETTERS_BY_ID } from '../data/letters';
 import { SENTENCES, SENTENCES_BY_ID } from '../data/sentences';
@@ -78,6 +79,42 @@ function sentenceOptions(s: Sentence, n: number, rng: Rng): Sentence[] {
   return shuffle([s, ...others], rng);
 }
 
+/* ---------- Personal preferences ---------- */
+
+/** Exercise kinds behind each "favourite game" a child can pick. */
+const GAME_KINDS: Record<string, string[]> = {
+  listening: ['listen-pick', 'listen-sentence', 'letter-listen', 'dialog-audio'],
+  puzzles: ['spell-tiles', 'missing-letter', 'first-letter', 'sentence-build', 'grammar-choice'],
+  speaking: ['say-word', 'say-sentence', 'say-reply'],
+  reading: ['word-pick-picture', 'picture-pick-word', 'sentence-picture', 'translate-pick', 'letter-case'],
+};
+
+const FAVOURITE_BOOST = 1.8;
+
+/** Makes the kinds of games the child loves come up more often. */
+function withPrefs<T extends string>(weights: { value: T; weight: number }[], ctx: GenContext) {
+  const games = ctx.profile.interests?.games ?? [];
+  if (!games.length) return weights;
+  const liked = new Set(games.flatMap((g) => GAME_KINDS[g] ?? []));
+  return weights.map((w) => (liked.has(w.value) ? { ...w, weight: w.weight * FAVOURITE_BOOST } : w));
+}
+
+function likesMemory(ctx: GenContext): boolean {
+  return ctx.profile.interests?.games.includes('memory') ?? false;
+}
+
+/** Whether a progress item belongs to one of the child's favourite topics. */
+function isFavouriteItem(ctx: GenContext, itemId: string): boolean {
+  const favs = favouriteIslands(ctx.profile.interests);
+  if (!favs.length) return false;
+  return favs.some((id) => ISLANDS_BY_ID[id]?.itemIds.includes(itemId) || itemId.startsWith(`${id === 'stories' ? 'story' : id}-`));
+}
+
+/** A child who cannot read yet (young and still at the beginning) only gets picture/sound exercises. */
+function isPreReader(ctx: GenContext): boolean {
+  return ctx.profile.age <= 5 && ctx.profile.ability < 2.2;
+}
+
 /* ---------- Single-exercise builders ---------- */
 
 const isSpellable = (w: Word) => /^[a-z]+$/i.test(w.en);
@@ -87,17 +124,18 @@ function wordKindWeights(word: Word, ctx: GenContext): { value: ExerciseKind; we
   const age = ctx.profile.age;
   const len = word.en.length;
   const spellable = isSpellable(word);
-  return [
+  const preReader = isPreReader(ctx);
+  return withPrefs<ExerciseKind>([
     { value: 'listen-pick', weight: a < 2.5 ? 3 : 2 },
-    { value: 'word-pick-picture', weight: a >= 1.6 ? 2 : 0.6 },
+    { value: 'word-pick-picture', weight: preReader ? 0 : a >= 1.6 ? 2 : 0.6 },
     { value: 'picture-pick-word', weight: a >= 2 ? 2 : 0 },
     { value: 'translate-pick', weight: a >= 2.5 && age >= 7 ? 1.2 : 0 },
     { value: 'first-letter', weight: spellable ? (a < 3.2 ? 1.5 : 0.4) : 0 },
     { value: 'missing-letter', weight: spellable && a >= 2 && len >= 3 ? 1.8 : 0 },
-    { value: 'spell-tiles', weight: spellable && len <= maxSpellLength(a) ? (a >= 2.3 ? 2.2 : 1) : 0 },
+    { value: 'spell-tiles', weight: spellable && !preReader && len <= maxSpellLength(a) ? (a >= 2.3 ? 2.2 : 1) : 0 },
     { value: 'spell-type', weight: spellable && a >= 3.8 && age >= 7 ? 1.5 : 0 },
     { value: 'say-word', weight: ctx.speaking ? 1.4 : 0 },
-  ];
+  ], ctx);
 }
 
 export function buildWordExercise(kind: ExerciseKind, word: Word, ctx: GenContext): Exercise {
@@ -181,12 +219,12 @@ function letterExercises(letter: Letter, count: number, ctx: GenContext): Exerci
 function sentenceExercises(s: Sentence, count: number, ctx: GenContext): Exercise[] {
   const a = ctx.profile.ability;
   const n = Math.min(3, optionCount(a));
-  const weights: { value: ExerciseKind; weight: number }[] = [
+  const weights = withPrefs<ExerciseKind>([
     { value: 'sentence-picture', weight: 2 },
     { value: 'listen-sentence', weight: 2 },
     { value: 'sentence-build', weight: a >= 2.5 ? 2.5 : 1 },
     { value: 'say-sentence', weight: ctx.speaking && a >= 2.8 ? 1.2 : 0 },
-  ];
+  ], ctx);
   const chosen: ExerciseKind[] = [];
   for (let i = 0; i < count; i++) {
     const k = weightedPick(weights.filter((w) => !chosen.includes(w.value)), ctx.rng);
@@ -215,12 +253,12 @@ function buildTiles(en: string, rng: Rng): string[] {
 function talkExercises(p: Phrase, count: number, ctx: GenContext, avoid: ExerciseKind[] = []): Exercise[] {
   const a = ctx.profile.ability;
   type K = ExerciseKind | 'dialog-audio';
-  const weights: { value: K; weight: number }[] = [
+  const weights = withPrefs<K>([
     { value: 'dialog-reply', weight: 3 },
     { value: 'dialog-audio', weight: a >= 3 ? 1.5 : 0 },
     { value: 'say-reply', weight: ctx.speaking && a >= 2.2 ? 1.5 : 0 },
     { value: 'sentence-build', weight: a >= 2.5 && p.reply.split(' ').length <= 7 ? 1.2 : 0 },
-  ];
+  ], ctx);
   const chosen: K[] = [];
   for (let i = 0; i < count; i++) {
     const k = weightedPick(weights.filter((w) => !chosen.includes(w.value) && !avoid.includes(w.value as ExerciseKind)), ctx.rng);
@@ -302,9 +340,11 @@ function spread(exs: Exercise[], rng: Rng): Exercise[] {
 }
 
 function dueReviews(ctx: GenContext, exclude: string[], max: number): string[] {
+  const fav = (id: string) => (isFavouriteItem(ctx, id) ? 0 : 1);
   const entries = Object.entries(ctx.profile.items)
     .filter(([id, p]) => !exclude.includes(id) && isDue(p, ctx.now))
-    .sort((a, b) => a[1].due - b[1].due);
+    // Favourite topics first, then the longest-waiting items.
+    .sort((a, b) => fav(a[0]) - fav(b[0]) || a[1].due - b[1].due);
   return entries.slice(0, max).map(([id]) => id);
 }
 
@@ -346,7 +386,11 @@ function regularLesson(island: Island, stage: Stage, ctx: GenContext): Exercise[
     const reviews = dueReviews(ctx, stage.itemIds, reviewCount)
       .map((id) => reviewExercise(id, ctx))
       .filter((e): e is Exercise => !!e);
-    return [...intro, ...spread([...later, ...reviews], rng), ...(mem ? [mem] : [])];
+    const middle = spread([...later, ...reviews], rng);
+    // Memory-game fans get an extra round half-way through.
+    const extra = likesMemory(ctx) ? memoryExercise(sample(memoryWords, memoryWords.length, rng), ctx) : null;
+    if (extra) middle.splice(Math.floor(middle.length / 2), 0, extra);
+    return [...intro, ...middle, ...(mem ? [mem] : [])];
   }
 
   if (island.kind === 'letters') {
@@ -457,14 +501,16 @@ function bossLesson(island: Island, ctx: GenContext): Exercise[] {
 export function generatePractice(ctx: GenContext, size = 10): Exercise[] {
   const seen = Object.entries(ctx.profile.items).filter(([, p]) => p.seen > 0);
   if (seen.length === 0) return [];
+  const fav = (id: string) => (isFavouriteItem(ctx, id) ? 0 : 1);
   const due = seen.filter(([, p]) => isDue(p, ctx.now)).sort((a, b) => a[1].due - b[1].due);
   const weak = seen
     .filter(([id]) => !due.some(([d]) => d === id))
-    .sort((a, b) => strength(a[1]) - strength(b[1]));
+    // Extra practice leans towards the child's favourite topics.
+    .sort((a, b) => fav(a[0]) - fav(b[0]) || strength(a[1]) - strength(b[1]));
   const ids = [...due, ...weak].slice(0, size).map(([id]) => id);
   const exs = ids.map((id) => reviewExercise(id, ctx)).filter((e): e is Exercise => !!e);
   const words = ids.map((id) => WORDS_BY_ID[id]).filter(Boolean);
-  const mem = words.length >= 4 ? memoryExercise(words, ctx) : null;
+  const mem = words.length >= (likesMemory(ctx) ? 3 : 4) ? memoryExercise(words, ctx) : null;
   return [...spread(exs, ctx.rng), ...(mem ? [mem] : [])];
 }
 

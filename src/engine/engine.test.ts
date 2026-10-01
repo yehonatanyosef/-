@@ -9,7 +9,7 @@ import { ALL_WORDS, WORDS_BY_ID } from '../data/words';
 import type { Profile } from '../types';
 import { answerText, easier, isGraded, type Exercise } from './exercises';
 import { generatePractice, generateStageLesson, wordOptions, type GenContext } from './lessonGen';
-import { answerPlacement, PLACEMENT_QUESTIONS, placementQuestion, placementResult, startPlacement } from './placement';
+import { answerPlacement, MAX_QUESTIONS, placementDone, placementQuestion, placementResult, startPlacement, startTier } from './placement';
 import { applyLesson, applyPlacement, createProfile, currentStage, isStageUnlocked, starsFor } from './progress';
 import { seeded } from './random';
 import { matchesSpeech } from './speech';
@@ -187,36 +187,125 @@ describe('spaced repetition', () => {
 });
 
 describe('placement test', () => {
-  function run(age: number, answer: (level: number) => boolean) {
-    const profile = createProfile('t', age, '🦸', NOW);
+  /** Kinds that need the child to read English text. */
+  const READING = ['word-pick-picture', 'picture-pick-word', 'missing-letter', 'spell-tiles', 'sentence-picture', 'listen-sentence', 'dialog-reply', 'grammar-choice', 'story-question', 'letter-case'];
+
+  /** Runs the test; `knows(tier)` says whether the child answers questions of that step correctly. */
+  function run(age: number, knows: (tier: number) => boolean, seed = 11, profileOver: Partial<Profile> = {}) {
+    const profile = { ...createProfile('t', age, '🦸', NOW), ...profileOver };
     let s = startPlacement(age);
-    const rng = seeded(11);
-    for (let i = 0; i < PLACEMENT_QUESTIONS; i++) {
+    const rng = seeded(seed);
+    const asked: { tier: number; kind: string; ex: Exercise }[] = [];
+    while (!placementDone(s)) {
       const q = placementQuestion(s, profile, rng);
       assertValid(q);
-      s = answerPlacement(s, q, answer(s.history.length ? s.history[s.history.length - 1].level : 0));
+      asked.push({ tier: s.tier, kind: q.kind, ex: q });
+      s = answerPlacement(s, q, knows(s.tier));
     }
-    return placementResult(s);
+    return { ...placementResult(s), asked, state: s };
   }
 
-  it('places a child who knows everything at the top level', () => {
-    expect(run(9, () => true).level).toBe(5);
-  });
-
-  it('places a child who knows nothing at level 1', () => {
-    expect(run(6, () => false).level).toBe(1);
-  });
-
-  it('converges near the level where the child starts failing', () => {
-    const profile = createProfile('t', 8, '🦸', NOW);
-    let s = startPlacement(8);
-    const rng = seeded(5);
-    for (let i = 0; i < PLACEMENT_QUESTIONS; i++) {
-      const q = placementQuestion(s, profile, rng);
-      const lvl = Math.round(Math.min(5, Math.max(1, s.ability)));
-      s = answerPlacement(s, q, lvl <= 3);
+  it('young children start with sound-and-picture questions only', () => {
+    for (const age of [4, 5, 6]) {
+      expect(startTier(age)).toBe(0);
+      const { asked } = run(age, () => false);
+      expect(asked[0].kind).toBe('listen-pick');
+      expect(asked.every((a) => !READING.includes(a.kind))).toBe(true);
     }
-    expect([3, 4]).toContain(placementResult(s).level);
+  });
+
+  it('a 4-year-old who knows no English gets a short, gentle test and level 1', () => {
+    const r = run(4, () => false);
+    expect(r.asked.length).toBeLessThanOrEqual(3);
+    expect(r.level).toBe(1);
+  });
+
+  it('climbs one step at a time and never skips a step', () => {
+    const r = run(5, () => true);
+    for (let i = 1; i < r.asked.length; i++) expect(r.asked[i].tier - r.asked[i - 1].tier).toBeLessThanOrEqual(1);
+    expect(r.level).toBe(5);
+  });
+
+  it('stops at the first step the child cannot do', () => {
+    // Reads simple words (step 2) but cannot spell (step 3).
+    const r = run(8, (t) => t <= 2);
+    expect(r.passed).toBe(2);
+    expect(r.level).toBe(2);
+    expect(r.asked.some((a) => a.tier >= 4)).toBe(false);
+  });
+
+  it('a pre-reader who knows letters stays below the reading level', () => {
+    const r = run(5, (t) => t <= 1);
+    expect(r.passed).toBe(1);
+    expect(r.ability).toBeLessThan(1.6);
+  });
+
+  it('an older child who knows nothing steps down to the easy questions', () => {
+    const r = run(10, () => false);
+    expect(r.asked[0].tier).toBe(2);
+    expect(r.asked.some((a) => a.tier === 0)).toBe(true);
+    expect(r.level).toBe(1);
+  });
+
+  it('uses words from the topics the child loves', () => {
+    const r = run(5, (t) => t === 0, 3, { interests: { topics: ['animals'], games: [] } });
+    const words = r.asked.filter((a) => a.kind === 'listen-pick').map((a) => (a.ex as Extract<Exercise, { kind: 'listen-pick' }>).word);
+    expect(words.length).toBeGreaterThan(0);
+    expect(words.every((w) => w.topic === 'animals')).toBe(true);
+  });
+
+  it('never runs longer than the maximum', () => {
+    let flip = false;
+    const r = run(9, () => (flip = !flip));
+    expect(r.asked.length).toBeLessThanOrEqual(MAX_QUESTIONS);
+  });
+});
+
+describe('interests', () => {
+  const interests = (topics: string[], games: string[]) => ({ interests: { topics, games } });
+
+  it('a young pre-reader gets no reading exercises in lessons', () => {
+    const p = { ...createProfile('a', 4, '🦸', NOW), ability: 1.3 };
+    for (let seed = 0; seed < 30; seed++) {
+      const lesson = generateStageLesson(STAGES_BY_ID['animals-0'], ctx(p, seed));
+      expect(lesson.some((e) => e.kind === 'word-pick-picture' || e.kind === 'spell-tiles')).toBe(false);
+    }
+  });
+
+  it('memory-game fans get an extra memory game', () => {
+    const base = { ...createProfile('a', 7, '🦸', NOW), ability: 2.5 };
+    const count = (p: Profile) => generateStageLesson(STAGES_BY_ID['animals-1'], ctx(p, 4)).filter((e) => e.kind === 'memory').length;
+    expect(count(base)).toBe(1);
+    expect(count({ ...base, ...interests([], ['memory']) })).toBe(2);
+  });
+
+  it('favourite kinds of games come up more often', () => {
+    const base = { ...createProfile('a', 8, '🦸', NOW), ability: 3 };
+    const puzzles = (p: Profile) => {
+      let n = 0;
+      for (let seed = 0; seed < 40; seed++)
+        n += generateStageLesson(STAGES_BY_ID['food-1'], ctx(p, seed, false)).filter((e) => ['spell-tiles', 'missing-letter', 'first-letter'].includes(e.kind)).length;
+      return n;
+    };
+    expect(puzzles({ ...base, ...interests([], ['puzzles']) })).toBeGreaterThan(puzzles(base) * 1.2);
+  });
+
+  it('a favourite island opens early once the child is ready, without moving the main path', () => {
+    const p = applyPlacement({ ...createProfile('a', 6, '🦸', NOW), ...interests(['animals'], []) }, 1, 1.3, NOW);
+    expect(isStageUnlocked(p, STAGES_BY_ID['animals-0'])).toBe(true);
+    expect(currentStage(p)?.id).toBe('abc-0');
+    // Not ready yet for a level-3 favourite.
+    const q = applyPlacement({ ...createProfile('b', 6, '🦸', NOW), ...interests(['sports'], []) }, 1, 1.3, NOW);
+    expect(isStageUnlocked(q, STAGES_BY_ID['actions-0'])).toBe(false);
+  });
+
+  it('practice leans towards favourite topics', () => {
+    const item = { box: 2, seen: 3, correct: 2, wrong: 1, due: NOW + DAY, last: NOW - DAY };
+    const items = Object.fromEntries([...ALL_WORDS.filter((w) => w.topic === 'food').slice(0, 10), ...ALL_WORDS.filter((w) => w.topic === 'animals').slice(0, 10)].map((w) => [w.id, item]));
+    const p = { ...createProfile('a', 8, '🦸', NOW), ability: 2.5, items, ...interests(['animals'], []) };
+    const ids = generatePractice(ctx(p)).map((e) => e.itemId).filter(Boolean) as string[];
+    expect(ids.length).toBeGreaterThan(0);
+    expect(ids.every((id) => id.startsWith('animals-'))).toBe(true);
   });
 });
 

@@ -1,6 +1,7 @@
 /* Every emoji shown as a picture in the game (content, companions, avatars, islands). */
 import { AVATARS, COMPANIONS } from './companions';
 import { GRAMMAR_ITEMS } from './grammar';
+import { GAME_INTERESTS, TOPIC_INTERESTS } from './interests';
 import { ISLANDS } from './islands';
 import { SENTENCES } from './sentences';
 import { STORIES } from './stories';
@@ -28,5 +29,7 @@ export function pictureEmojis(): string[] {
   add('🧒🙂'); // conversation partners
   PHRASES.forEach((p) => add(p.emoji));
   GRAMMAR_ITEMS.forEach((g) => add(g.emoji));
+  [...TOPIC_INTERESTS, ...GAME_INTERESTS].forEach((i) => add(i.emoji));
+  add('🎧🔤📖✏️💬🧩'); // level-test steps
   return [...out].sort();
 }

@@ -8,8 +8,27 @@ interface Option {
   key: string;
   content: ReactNode;
   correct: boolean;
-  /** Text spoken when the option is tapped (helps pre-readers). */
+  /** English text of the option: read when chosen, and playable from its 🔊 button. */
   say?: string;
+}
+
+/** Small 🔊 next to an answer – hear it without choosing it. */
+function OptionSpeaker({ text }: { text: string }) {
+  const [playing, setPlaying] = useState(false);
+  return (
+    <button
+      type="button"
+      className={`opt-speak ${playing ? 'playing' : ''}`}
+      aria-label={`השמע: ${text}`}
+      onClick={async () => {
+        setPlaying(true);
+        await speak(text);
+        setPlaying(false);
+      }}
+    >
+      🔊
+    </button>
+  );
 }
 
 export function ChoiceGrid({
@@ -37,9 +56,12 @@ export function ChoiceGrid({
       {options.map((o) => {
         const state = !chosen ? '' : o.correct ? 'right' : o.key === chosen ? 'wrong' : 'dim';
         return (
-          <button key={o.key} type="button" className={`choice ${state}`} onClick={() => choose(o)} disabled={!!chosen}>
-            {o.content}
-          </button>
+          <div key={o.key} className={`choice-cell ${o.say ? 'has-speak' : ''}`}>
+            <button type="button" className={`choice ${state}`} onClick={() => choose(o)} disabled={!!chosen}>
+              {o.content}
+            </button>
+            {o.say && <OptionSpeaker text={o.say} />}
+          </div>
         );
       })}
     </div>

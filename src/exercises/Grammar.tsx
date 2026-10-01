@@ -49,7 +49,7 @@ export function GrammarChoice({ ex, hints, onAnswer }: ExProps<'grammar-choice'>
         layout="letters"
         onAnswer={onAnswer}
         onPick={setPicked}
-        options={g.options.map((o) => ({ key: o, correct: o === g.answer, content: <En className="word-opt">{o}</En> }))}
+        options={g.options.map((o) => ({ key: o, correct: o === g.answer, say: o, content: <En className="word-opt">{o}</En> }))}
       />
     </div>
   );

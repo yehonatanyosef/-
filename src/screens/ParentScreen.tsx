@@ -257,6 +257,21 @@ export function ParentScreen({
 
           <section className="card actions">
             <h3>ניהול שחקן</h3>
+            <div className="field age-edit">
+              <span>גיל (קובע אילו תרגילים מתאימים – קריאת משפטים והשלמת אותיות מגיל 7–8):</span>
+              <div className="age-row">
+                {[4, 5, 6, 7, 8, 9, 10, 11].map((a) => (
+                  <button
+                    key={a}
+                    type="button"
+                    className={`age-btn ${p.age === a ? 'on' : ''}`}
+                    onClick={() => p.age !== a && onUpdateProfile({ ...p, age: a })}
+                  >
+                    {a}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="row wrap">
               <BigButton color="blue" onClick={() => onRetakePlacement(p.id)}>
                 🔁 בדיקת רמה מחדש
@@ -323,7 +338,7 @@ export function ParentScreen({
         {!canSpeak() && !settings.naturalVoice && <p className="err">הדפדפן לא תומך בהקראה קולית. מומלץ להשתמש ב-Chrome, Edge או Safari.</p>}
         <InstallButton />
         <p className="muted credits">
-          קול: Piper TTS (CC0) · איורים: Microsoft Fluent Emoji (MIT)
+          קול: Kokoro (Apache-2.0) · איורים: Microsoft Fluent Emoji (MIT)
         </p>
         <p className="muted">{cloud.user ? 'הנתונים נשמרים במכשיר ובחשבון הענן.' : 'כל הנתונים נשמרים במכשיר זה בלבד.'}</p>
       </section>

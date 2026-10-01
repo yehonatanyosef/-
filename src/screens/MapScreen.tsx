@@ -3,6 +3,7 @@ import { BigButton, Companion, En, GoalRing, Modal } from '../components/common'
 import { COMPANIONS_BY_ID } from '../data/companions';
 import { GRAMMAR_BY_ID } from '../data/grammar';
 import { favouriteIslands } from '../data/interests';
+import { islandSuitsAge, READING_AGE_LABEL } from '../engine/age';
 import { ISLANDS } from '../data/islands';
 import { LETTERS_BY_ID } from '../data/letters';
 import { SENTENCES_BY_ID } from '../data/sentences';
@@ -131,7 +132,10 @@ export function MapScreen({
                   {unlocked ? `⭐ ${starsHere}/${island.stages.length * 3}` : '🔒'}
                 </span>
               </div>
-              {!unlocked && (
+              {!unlocked && !islandSuitsAge(profile, island) && (
+                <p className="island-lock-msg">📚 כאן קוראים משפטים – האי ייפתח {READING_AGE_LABEL}</p>
+              )}
+              {!unlocked && islandSuitsAge(profile, island) && (
                 <p className="island-lock-msg">
                   {favourite ? '💖 נושא שאתם אוהבים! ייפתח מוקדם כשתתחזקו עוד קצת, או אחרי ' : 'נפתח אחרי ניצחון על הבוס של '}
                   {ISLANDS[ii - 1]?.name}

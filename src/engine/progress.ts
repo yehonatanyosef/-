@@ -1,4 +1,5 @@
 import { favouriteIslands } from '../data/interests';
+import { islandSuitsAge } from './age';
 import { ISLANDS, ISLANDS_BY_ID, startIslandIndex } from '../data/islands';
 import { LETTERS } from '../data/letters';
 import { WORDS_BY_ID } from '../data/words';
@@ -89,13 +90,22 @@ export function canSkipToBoss(profile: Profile, island: Island): boolean {
   return profile.ability >= island.level + 1.2 && isStageUnlocked(profile, island.stages[0]);
 }
 
+/** The closest earlier island that suits the child's age (islands that don't are skipped). */
+function previousIsland(profile: Profile, islandIdx: number): Island | undefined {
+  return ISLANDS.slice(0, islandIdx)
+    .reverse()
+    .find((i) => islandSuitsAge(profile, i));
+}
+
 export function isStageUnlocked(profile: Profile, stage: Stage): boolean {
-  if (profile.unlocked.includes(stage.id)) return true;
   const island = ISLANDS_BY_ID[stage.islandId];
+  // Sentence-reading islands wait until the child is old enough.
+  if (!islandSuitsAge(profile, island)) return false;
+  if (profile.unlocked.includes(stage.id)) return true;
   const islandIdx = ISLANDS.indexOf(island);
   if (stage.index === 0) {
-    if (islandIdx === 0) return true;
-    if (islandDone(profile, ISLANDS[islandIdx - 1])) return true;
+    const prev = previousIsland(profile, islandIdx);
+    if (!prev || islandDone(profile, prev)) return true;
     // A favourite topic opens early once the child is ready for its level.
     if (isFavouriteOpenEarly(profile, island)) return true;
     // An island added in an update must not lock islands a child has already reached.
@@ -125,7 +135,8 @@ export function currentStage(profile: Profile): Stage | null {
     const island = ISLANDS[i];
     if (!isIslandUnlocked(profile, island)) continue;
     // A favourite island opened early is a bonus – the journey continues on the main path.
-    const prevDone = i === 0 || islandDone(profile, ISLANDS[i - 1]);
+    const prev = previousIsland(profile, i);
+    const prevDone = !prev || islandDone(profile, prev);
     if (!prevDone && isFavouriteOpenEarly(profile, island) && !islandHasProgress(profile, island)) continue;
     const next = island.stages.find((s) => isStageUnlocked(profile, s) && !stageDone(profile, s));
     if (next) return next;

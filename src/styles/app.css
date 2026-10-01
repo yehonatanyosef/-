@@ -2057,7 +2057,24 @@ h2 {
   background: #fee2e2;
 }
 
-/* ---------- Install ---------- */
+/* ---------- Install & updates ---------- */
+
+.update-banner {
+  display: block;
+  width: 100%;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: linear-gradient(90deg, #bbf7d0, #86efac);
+  color: var(--green-d);
+  font-weight: 700;
+  box-shadow: var(--shadow);
+}
+.version {
+  direction: ltr;
+  text-align: end;
+  font-size: 0.75rem;
+}
 
 .ios-steps {
   text-align: start;

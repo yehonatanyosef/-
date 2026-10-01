@@ -1,13 +1,27 @@
+import { execSync } from 'node:child_process';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+function version(): string {
+  if (process.env.APP_VERSION) return process.env.APP_VERSION;
+  const date = new Date().toISOString().slice(0, 10);
+  try {
+    return `${date} · ${execSync('git rev-parse --short HEAD').toString().trim()}`;
+  } catch {
+    return date;
+  }
+}
+
 export default defineConfig({
   base: './',
+  define: { __APP_VERSION__: JSON.stringify(version()) },
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // Registered from src/engine/updates.ts, which decides when to switch to a new version.
+      registerType: 'prompt',
+      injectRegister: false,
       includeAssets: ['apple-touch-icon.png'],
       manifest: {
         name: 'אי האנגלית – English Island',

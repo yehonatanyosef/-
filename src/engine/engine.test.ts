@@ -9,7 +9,7 @@ import { ALL_WORDS, WORDS_BY_ID } from '../data/words';
 import type { Profile } from '../types';
 import { answerText, easier, isGraded, type Exercise } from './exercises';
 import { generatePractice, generateStageLesson, wordOptions, type GenContext } from './lessonGen';
-import { answerPlacement, MAX_QUESTIONS, placementDone, placementQuestion, placementResult, startPlacement, startTier } from './placement';
+import { answerPlacement, MAX_QUESTIONS, placementDone, placementQuestion, placementResult, startPlacement, startTier, YOUNG_EASY_QUESTIONS } from './placement';
 import { applyLesson, applyPlacement, createProfile, currentStage, isStageUnlocked, starsFor } from './progress';
 import { seeded } from './random';
 import { matchesSpeech } from './speech';
@@ -254,13 +254,30 @@ describe('placement test', () => {
     expect(words.every((w) => w.topic === 'animals')).toBe(true);
   });
 
-  it('children under 7 are never asked letter completion or sentences, even when they know everything', () => {
-    for (const age of [4, 5, 6]) {
-      const r = run(age, () => true);
-      expect(r.asked.every((a) => a.tier <= 2)).toBe(true);
-      expect(r.asked.some((a) => ['missing-letter', 'spell-tiles', 'sentence-picture', 'dialog-reply', 'grammar-choice', 'listen-sentence', 'story-question'].includes(a.kind))).toBe(false);
-      expect(r.level).toBe(2);
-    }
+  const HARD = ['missing-letter', 'spell-tiles', 'picture-pick-word', 'sentence-picture', 'dialog-reply', 'grammar-choice', 'listen-sentence', 'story-question'];
+
+  it('ages 5–6: the first 8 questions are always listening, letters and single words', () => {
+    for (const age of [4, 5, 6])
+      for (let seed = 0; seed < 50; seed++) {
+        let n = 0;
+        const r = run(age, () => (n++ % 7 !== 6), seed); // strong child, an occasional slip
+        r.asked.slice(0, YOUNG_EASY_QUESTIONS).forEach((a) => {
+          expect(a.tier).toBeLessThanOrEqual(2);
+          expect(HARD).not.toContain(a.kind);
+        });
+      }
+  });
+
+  it('ages 5–6: harder questions come only late, and only for children who answer almost everything', () => {
+    const strong = run(5, () => true);
+    const firstHard = strong.asked.findIndex((a) => a.tier > 2);
+    expect(firstHard).toBeGreaterThanOrEqual(YOUNG_EASY_QUESTIONS);
+    expect(strong.level).toBeGreaterThan(2);
+    // Two mistakes on the easy steps – no hard questions at all.
+    let n = 0;
+    const average = run(6, (t) => (t <= 2 ? n++ % 3 !== 2 : false));
+    expect(average.asked.some((a) => a.tier > 2)).toBe(false);
+    expect(average.level).toBeLessThanOrEqual(2);
   });
 
   it('never runs longer than the maximum', () => {

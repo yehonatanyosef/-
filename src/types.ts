@@ -131,13 +131,36 @@ export interface Profile {
   resetAt?: number;
   /** What the child said they love (topics and kinds of games). */
   interests?: Interests;
+  /** Today's daily mission. */
+  daily?: DailyMission;
+  /** Days (dayKey) on which the daily mission was completed and its chest opened. */
+  missionDays?: string[];
+  /** Weeks (dayKey of the week's Sunday) whose weekly chest was opened. */
+  weeklyChests?: string[];
+  /** The child's own island. */
+  island?: IslandState;
+}
+
+export interface DailyMission {
+  day: string; // dayKey
+  games: number;
+  /** A practice (review) session was played today. */
+  practiced: boolean;
+}
+
+export interface IslandState {
+  /** What stands on each tile of the island (island item id or null). */
+  slots: (string | null)[];
+  /** Decorations won from chests (decor ids). */
+  decor: string[];
 }
 
 export interface Settings {
   sound: boolean;
   speaking: boolean;
   speechRate: number;
-  dailyGoal: number;
+  /** Games in the daily mission. */
+  dailyGames: number;
   hebrewHints: boolean;
   /** Use the recorded natural voice (falls back to the device voice). */
   naturalVoice: boolean;

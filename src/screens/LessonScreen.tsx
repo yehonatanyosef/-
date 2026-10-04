@@ -138,6 +138,7 @@ export function LessonScreen({ profile, settings, stageId, onFinish, onExit, onR
         profile={result.profile}
         boss={!!stage?.boss}
         practice={!stage}
+        goal={settings.dailyGames}
         onContinue={onExit}
         onReplay={onReplay}
       />

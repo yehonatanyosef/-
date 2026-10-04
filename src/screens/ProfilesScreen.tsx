@@ -1,3 +1,4 @@
+import { AGES } from '../engine/age';
 import { useState } from 'react';
 import { BigButton, Companion, En } from '../components/common';
 import { InstallButton } from '../components/InstallButton';
@@ -81,7 +82,7 @@ export function NewProfileScreen({
       <div className="field">
         <span>בן/בת כמה את/ה?</span>
         <div className="age-row">
-          {[4, 5, 6, 7, 8, 9, 10, 11].map((a) => (
+          {AGES.map((a) => (
             <button key={a} type="button" className={`age-btn ${age === a ? 'on' : ''}`} onClick={() => setAge(a)}>
               {a}
             </button>

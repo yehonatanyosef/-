@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { BigButton, Companion, En, GoalRing, Modal } from '../components/common';
+import { ChestModal } from '../components/Chest';
+import { MissionCard } from '../components/MissionCard';
+import type { ChestKind } from '../engine/island';
+import { missionStatus, nextMissionGame, openChest } from '../engine/mission';
 import { COMPANIONS_BY_ID } from '../data/companions';
 import { GRAMMAR_BY_ID } from '../data/grammar';
 import { UpdateBanner } from '../components/UpdateBanner';
@@ -11,7 +15,7 @@ import { SENTENCES_BY_ID } from '../data/sentences';
 import { STORIES_BY_ID } from '../data/stories';
 import { PHRASES_BY_ID } from '../data/talk';
 import { WORDS_BY_ID } from '../data/words';
-import { currentStage, isIslandUnlocked, isStageUnlocked, levelLabel, stageDone, todayXp } from '../engine/progress';
+import { currentStage, isIslandUnlocked, isStageUnlocked, levelLabel, stageDone } from '../engine/progress';
 import { sfx } from '../engine/sound';
 import { isDue } from '../engine/srs';
 import type { Profile, Settings, Stage } from '../types';
@@ -41,6 +45,8 @@ export function MapScreen({
   onParents,
   onInterests,
   onSwitchProfile,
+  onIsland,
+  onUpdate,
 }: {
   profile: Profile;
   settings: Settings;
@@ -51,8 +57,11 @@ export function MapScreen({
   onParents: () => void;
   onInterests: () => void;
   onSwitchProfile: () => void;
+  onIsland: () => void;
+  onUpdate: (p: Profile) => void;
 }) {
   const [selected, setSelected] = useState<Stage | null>(null);
+  const [chest, setChest] = useState<ChestKind | null>(null);
   const current = currentStage(profile);
   const currentRef = useRef<HTMLButtonElement>(null);
   const greeting = useMemo(() => GREETINGS[Math.floor(Math.random() * GREETINGS.length)], []);
@@ -63,7 +72,12 @@ export function MapScreen({
   const totalStars = Object.values(profile.stages).reduce((s, r) => s + r.stars, 0);
   const now = Date.now();
   const dueCount = Object.values(profile.items).filter((p) => isDue(p, now)).length;
-  const xpToday = todayXp(profile, now);
+  const mission = missionStatus(profile, settings.dailyGames, now);
+  const playMission = () => {
+    const { stageId } = nextMissionGame(profile, now);
+    if (stageId) onPlay(stageId);
+    else onPractice();
+  };
   const level = levelLabel(profile.ability);
 
   useEffect(() => {
@@ -94,8 +108,8 @@ export function MapScreen({
           <span className={`stat ${profile.streak > 0 ? 'fire' : ''}`} title="ימים ברצף">
             🔥 {profile.streak}
           </span>
-          <span className="stat goal" title={`יעד יומי: ${xpToday}/${settings.dailyGoal} נקודות`}>
-            <GoalRing value={xpToday} goal={settings.dailyGoal} size={38} />
+          <span className="stat goal" title={`משימה יומית: ${mission.games}/${mission.goal} משחקים`}>
+            <GoalRing value={mission.games} goal={mission.goal} size={38} />
           </span>
         </div>
       </header>
@@ -103,8 +117,9 @@ export function MapScreen({
       <div className="map-scroll">
         <UpdateBanner />
         <div className="map-greeting">
-          <Companion id={profile.companion} message={`${greeting} ${xpToday >= settings.dailyGoal ? 'השלמתם את היעד היומי! 🎯' : ''}`} />
+          <Companion id={profile.companion} message={greeting} />
         </div>
+        <MissionCard profile={profile} status={mission} onPlay={playMission} onChest={setChest} />
         {!profile.interests && lessonsPlayed >= 2 && (
           <button type="button" className="interest-prompt pop-in" onClick={onInterests}>
             💖 ספרו לי מה אתם הכי אוהבים, ואתאים את המשחק בשבילכם!
@@ -194,7 +209,7 @@ export function MapScreen({
         <div className="map-end">🏁 עוד איים בדרך...</div>
       </div>
 
-      <nav className="bottom-nav">
+      <nav className="bottom-nav six">
         <button type="button" onClick={onPractice}>
           <span>🔁</span>
           <small>תרגול</small>
@@ -203,6 +218,10 @@ export function MapScreen({
         <button type="button" onClick={onShop}>
           <span>🛍️</span>
           <small>חנות</small>
+        </button>
+        <button type="button" className="nav-island" onClick={onIsland}>
+          <span>🏝️</span>
+          <small>האי שלי</small>
         </button>
         <button type="button" onClick={onAchievements}>
           <span>🏆</span>
@@ -217,6 +236,22 @@ export function MapScreen({
           <small>הורים</small>
         </button>
       </nav>
+
+      {chest && (
+        <ChestModal
+          kind={chest}
+          open={() => {
+            const out = openChest(profile, chest, Math.random);
+            onUpdate(out.profile);
+            return out.reward;
+          }}
+          onClose={() => setChest(null)}
+          onIsland={() => {
+            setChest(null);
+            onIsland();
+          }}
+        />
+      )}
 
       {selected && (
         <StageSheet

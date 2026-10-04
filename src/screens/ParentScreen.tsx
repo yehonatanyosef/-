@@ -1,3 +1,4 @@
+import { AGES } from '../engine/age';
 import { useMemo, useState } from 'react';
 import { CloudPanel } from '../components/CloudPanel';
 import { InstallButton } from '../components/InstallButton';
@@ -261,7 +262,7 @@ export function ParentScreen({
             <div className="field age-edit">
               <span>גיל (קובע אילו תרגילים מתאימים – קריאת משפטים והשלמת אותיות מגיל 7–8):</span>
               <div className="age-row">
-                {[4, 5, 6, 7, 8, 9, 10, 11].map((a) => (
+                {AGES.map((a) => (
                   <button
                     key={a}
                     type="button"
@@ -326,14 +327,14 @@ export function ParentScreen({
           />
         </label>
         <label className="range">
-          יעד יומי: {settings.dailyGoal} נקודות
+          משימה יומית: {settings.dailyGames} משחקים (כ-{settings.dailyGames * 4} דקות)
           <input
             type="range"
-            min={20}
-            max={120}
-            step={10}
-            value={settings.dailyGoal}
-            onChange={(e) => onSettings({ ...settings, dailyGoal: Number(e.target.value) })}
+            min={2}
+            max={6}
+            step={1}
+            value={settings.dailyGames}
+            onChange={(e) => onSettings({ ...settings, dailyGames: Number(e.target.value) })}
           />
         </label>
         {!canSpeak() && !settings.naturalVoice && <p className="err">הדפדפן לא תומך בהקראה קולית. מומלץ להשתמש ב-Chrome, Edge או Safari.</p>}

@@ -3,7 +3,9 @@ import { BigButton, Companion, En } from '../components/common';
 import { WORDS_BY_ID } from '../data/words';
 import { ACHIEVEMENTS_BY_ID } from '../engine/achievements';
 import { celebrate, stars as starBurst } from '../engine/effects';
-import { levelLabel, type LessonRewards } from '../engine/progress';
+import { newIslandWords } from '../engine/island';
+import { levelLabel, todayMission, type LessonRewards } from '../engine/progress';
+import { Emoji } from '../components/Emoji';
 import { sfx } from '../engine/sound';
 import type { Profile } from '../types';
 
@@ -33,6 +35,7 @@ export function LessonResult({
   profile,
   boss,
   practice,
+  goal,
   onContinue,
   onReplay,
 }: {
@@ -40,6 +43,7 @@ export function LessonResult({
   profile: Profile;
   boss: boolean;
   practice: boolean;
+  goal: number;
   onContinue: () => void;
   onReplay: () => void;
 }) {
@@ -67,6 +71,8 @@ export function LessonResult({
   }, [rewards.stars, leveledUp]);
 
   const pct = Math.round(rewards.accuracy * 100);
+  const games = todayMission(profile).games;
+  const toIsland = newIslandWords(rewards.learnedNow).length;
   const message =
     rewards.stars === 3 ? 'מושלם! אתם אלופים! 🏆' : rewards.stars === 2 ? 'עבודה מצוינת! עוד קצת ותגיעו ל-3 כוכבים' : 'כל הכבוד שסיימתם! תרגול עושה מושלם 💪';
 
@@ -106,6 +112,14 @@ export function LessonResult({
         )}
       </div>
 
+      <div className={`result-mission ${games >= goal ? 'done' : ''}`}>
+        {games === goal
+          ? '🎁 השלמתם את המשימה של היום! התיבה מחכה לכם במפה'
+          : games > goal
+            ? '⭐ משחק בונוס – המשימה של היום כבר הושלמה'
+            : `🎯 המשימה של היום: ${games}/${goal} משחקים`}
+      </div>
+
       {leveledUp && (
         <div className="level-up pop-in">
           ⬆️ עליתם רמה! עכשיו אתם ברמת <b>{after.he}</b> ({after.cefr})
@@ -114,11 +128,11 @@ export function LessonResult({
 
       {rewards.learnedNow.length > 0 && (
         <div className="learned">
-          <div className="learned-title">מילים שלמדתם:</div>
+          <div className="learned-title">{toIsland ? 'מילים שלמדתם – הן מחכות לכם בתיק באי 🏝️' : 'מילים שלמדתם:'}</div>
           <div className="learned-list">
             {rewards.learnedNow.slice(0, 12).map((id) => (
               <span key={id} className="learned-chip">
-                {WORDS_BY_ID[id].emoji || '🎨'} <En>{WORDS_BY_ID[id].en}</En>
+                {WORDS_BY_ID[id].emoji ? <Emoji char={WORDS_BY_ID[id].emoji} size={26} /> : '🎨'} <En>{WORDS_BY_ID[id].en}</En>
               </span>
             ))}
           </div>

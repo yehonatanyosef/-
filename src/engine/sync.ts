@@ -51,6 +51,10 @@ export function mergeProfile(local: Profile, remote: Profile): Profile {
     activity: mergeActivity(older.activity, newer.activity),
     unlocked: union(newer.unlocked, older.unlocked),
     achievements: union(newer.achievements, older.achievements),
+    missionDays: union(newer.missionDays ?? [], older.missionDays ?? []),
+    weeklyChests: union(newer.weeklyChests ?? [], older.weeklyChests ?? []),
+    // Decorations won on either device are kept; the layout follows the newer copy.
+    island: newer.island || older.island ? { slots: newer.island?.slots ?? older.island?.slots ?? [], decor: union(newer.island?.decor ?? [], older.island?.decor ?? []) } : undefined,
     ownedCompanions: union(newer.ownedCompanions, older.ownedCompanions),
     xp: Math.max(newer.xp, older.xp),
     totalSeconds: Math.max(newer.totalSeconds, older.totalSeconds),

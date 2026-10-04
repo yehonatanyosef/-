@@ -3,7 +3,7 @@ import { islandSuitsAge } from './age';
 import { ISLANDS, ISLANDS_BY_ID, startIslandIndex } from '../data/islands';
 import { LETTERS } from '../data/letters';
 import { WORDS_BY_ID } from '../data/words';
-import { SKILLS, type Island, type Profile, type Skill, type Stage } from '../types';
+import { SKILLS, type DailyMission, type Island, type Profile, type Skill, type Stage } from '../types';
 import { checkAchievements } from './achievements';
 import { clamp } from './random';
 import { isLearned, isMastered, review } from './srs';
@@ -147,6 +147,19 @@ export function currentStage(profile: Profile): Stage | null {
   return ISLANDS[0].stages[0];
 }
 
+/* ---------- Daily mission ---------- */
+
+export function todayMission(profile: Profile, now = Date.now()): DailyMission {
+  const day = dayKey(now);
+  return profile.daily?.day === day ? profile.daily : { day, games: 0, practiced: false };
+}
+
+/** Counts a finished game towards today's mission. */
+export function recordGame(profile: Profile, practice: boolean, now = Date.now()): DailyMission {
+  const m = todayMission(profile, now);
+  return { ...m, games: m.games + 1, practiced: m.practiced || practice };
+}
+
 /* ---------- Lesson results ---------- */
 
 export interface AnswerLog {
@@ -253,6 +266,7 @@ export function applyLesson(profile: Profile, outcome: LessonOutcome, now = Date
     perfectLessons: profile.perfectLessons + (perfect ? 1 : 0),
     spokenCorrect: profile.spokenCorrect + spoken,
     totalSeconds: profile.totalSeconds + outcome.seconds,
+    daily: recordGame(profile, !outcome.stageId, now),
   };
   const newAchievements = checkAchievements(next);
   if (newAchievements.length) next = { ...next, achievements: [...next.achievements, ...newAchievements] };

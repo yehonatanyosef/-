@@ -2,6 +2,7 @@
  * Every English phrase the game reads aloud. scripts/collect-texts.ts writes this list
  * to a file and scripts/generate-audio.py records each phrase with the natural voice.
  */
+import { DECOR } from './decor';
 import { GRAMMAR_ITEMS, GRAMMAR_RULES, grammarSentence } from './grammar';
 import { LETTERS } from './letters';
 import { SENTENCES } from './sentences';
@@ -46,5 +47,6 @@ export function speakableTexts(): string[] {
     g.options.forEach(add);
   });
   GRAMMAR_RULES.forEach((r) => r.examples.forEach((e) => add(e.en)));
+  DECOR.forEach((d) => add(d.en));
   return [...out].sort();
 }

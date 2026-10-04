@@ -7,6 +7,9 @@
  */
 import type { Island, Profile } from '../types';
 
+/** Ages the game is made for. */
+export const AGES = [5, 6, 7, 8, 9, 10, 11, 12];
+
 export const READING_AGE_LABEL = 'מגיל 7–8';
 
 /** Letter recognition (the alphabet island, letter questions) starts at this age. */

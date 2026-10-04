@@ -9,6 +9,8 @@ import { LessonScreen } from './screens/LessonScreen';
 import { MapScreen } from './screens/MapScreen';
 import { ParentScreen } from './screens/ParentScreen';
 import { InterestsScreen } from './screens/InterestsScreen';
+import { IslandScreen } from './screens/IslandScreen';
+import { nextMissionGame } from './engine/mission';
 import { PlacementScreen } from './screens/PlacementScreen';
 import { NewProfileScreen, ProfilesScreen } from './screens/ProfilesScreen';
 import { AchievementsScreen, ShopScreen } from './screens/ShopScreen';
@@ -23,6 +25,7 @@ type Screen =
   | { name: 'lesson'; stageId: string | null; run: number }
   | { name: 'shop' }
   | { name: 'achievements' }
+  | { name: 'island' }
   | { name: 'parents' };
 
 export default function App() {
@@ -132,6 +135,17 @@ export default function App() {
       if (!profile) return null;
       return <ShopScreen profile={profile} onUpdate={updateProfile} onBack={goHome} />;
 
+    case 'island':
+      if (!profile) return null;
+      return (
+        <IslandScreen
+          profile={profile}
+          onUpdate={updateProfile}
+          onBack={goHome}
+          onPlay={() => setScreen({ name: 'lesson', stageId: nextMissionGame(profile).stageId, run: Date.now() })}
+        />
+      );
+
     case 'achievements':
       if (!profile) return null;
       return <AchievementsScreen profile={profile} onBack={goHome} />;
@@ -187,6 +201,8 @@ export default function App() {
           onParents={() => setScreen({ name: 'parents' })}
           onInterests={() => setScreen({ name: 'interests', next: 'map' })}
           onSwitchProfile={() => setScreen({ name: 'profiles' })}
+          onIsland={() => setScreen({ name: 'island' })}
+          onUpdate={updateProfile}
         />
       );
   }

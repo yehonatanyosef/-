@@ -6,7 +6,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sound: true,
   speaking: true,
   speechRate: 0.85,
-  dailyGoal: 40,
+  dailyGames: 3,
   hebrewHints: true,
   naturalVoice: true,
 };

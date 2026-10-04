@@ -1,5 +1,6 @@
 /* Every emoji shown as a picture in the game (content, companions, avatars, islands). */
 import { AVATARS, COMPANIONS } from './companions';
+import { DECOR } from './decor';
 import { GRAMMAR_ITEMS } from './grammar';
 import { GAME_INTERESTS, TOPIC_INTERESTS } from './interests';
 import { ISLANDS } from './islands';
@@ -31,5 +32,7 @@ export function pictureEmojis(): string[] {
   GRAMMAR_ITEMS.forEach((g) => add(g.emoji));
   [...TOPIC_INTERESTS, ...GAME_INTERESTS].forEach((i) => add(i.emoji));
   add('🎧🔤📖✏️💬🧩'); // level-test steps
+  DECOR.forEach((d) => add(d.emoji));
+  add('🎯🎁💎'); // daily mission and chests
   return [...out].sort();
 }

@@ -86,10 +86,10 @@ describe('mergeData', () => {
   });
 
   it('uses the most recently changed settings', () => {
-    const a = data([], { settings: { ...DEFAULT_SETTINGS, dailyGoal: 40 }, settingsUpdatedAt: T });
-    const b = data([], { settings: { ...DEFAULT_SETTINGS, dailyGoal: 80 }, settingsUpdatedAt: T + 1 });
-    expect(mergeData(a, b).settings.dailyGoal).toBe(80);
-    expect(mergeData(b, a).settings.dailyGoal).toBe(80);
+    const a = data([], { settings: { ...DEFAULT_SETTINGS, dailyGames: 3 }, settingsUpdatedAt: T });
+    const b = data([], { settings: { ...DEFAULT_SETTINGS, dailyGames: 5 }, settingsUpdatedAt: T + 1 });
+    expect(mergeData(a, b).settings.dailyGames).toBe(5);
+    expect(mergeData(b, a).settings.dailyGames).toBe(5);
   });
 
   it('merging is stable when run twice', () => {

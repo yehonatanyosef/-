@@ -98,7 +98,7 @@ def wav_write(path, x):
 
 
 # --------------------------------------------------------------------- TTS
-async def _edge(text, mp3):
+async def _edge(text, mp3, rate="+12%", pitch="+0Hz", volume="+0%"):
     import edge_tts, ssl, aiohttp
     kw = {}
     proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy")
@@ -107,8 +107,60 @@ async def _edge(text, mp3):
         ca = os.environ.get("SSL_CERT_FILE") or "/root/.ccr/ca-bundle.crt"
         if os.path.exists(ca):
             kw["connector"] = aiohttp.TCPConnector(ssl=ssl.create_default_context(cafile=ca))
-    c = edge_tts.Communicate(text, "he-IL-HilaNeural", rate="+14%", pitch="+0Hz", **kw)
+    c = edge_tts.Communicate(text, "he-IL-HilaNeural", rate=rate, pitch=pitch, volume=volume, **kw)
     await asyncio.wait_for(c.save(mp3), timeout=25)
+
+
+def wav_write_mono(path, x):
+    wav_write(path, x)
+
+
+def trim_silence(a, thr=0.012, pad=0.03):
+    idx = np.where(np.abs(a) > thr)[0]
+    if len(idx) == 0:
+        return a
+    i0, i1 = max(0, idx[0] - int(pad * SR)), min(len(a), idx[-1] + int(pad * SR))
+    return a[i0:i1]
+
+
+def humanize(src, dst):
+    """Studio-style polish: warmth, presence, de-ess, gentle compression, tiny room."""
+    sh("ffmpeg", "-y", "-i", src, "-af",
+       "highpass=f=75,"
+       "equalizer=f=180:t=q:w=1:g=2.5,"      # warmth
+       "equalizer=f=3200:t=q:w=1.2:g=1.8,"   # presence / clarity
+       "deesser=i=0.35:m=0.5:f=0.5,"
+       "acompressor=threshold=0.12:ratio=2.2:attack=15:release=180:makeup=1.6,"
+       "aecho=0.85:0.9:38|71:0.10|0.05,"     # very light room tone
+       "lowpass=f=14000",
+       dst)
+
+
+def edge_scene(i, text):
+    """Synthesize sentence by sentence: questions rise, endings fall, natural pauses."""
+    import re
+    sents = [t.strip() for t in re.split(r"(?<=[.?!])\s+", text) if t.strip()]
+    parts = []
+    for k, t in enumerate(sents):
+        last = k == len(sents) - 1
+        q = t.endswith("?")
+        rate = 12 - (4 if last else 0) - (2 if q else 0)
+        pitch = (4 if q else 0) + (-3 if last and not q else 0) + (1 if k == 0 and not q else 0)
+        mp3 = os.path.join(WORK, f"vo_{i}_{k}.mp3")
+        asyncio.run(_edge(t, mp3, rate=f"{rate:+d}%", pitch=f"{pitch:+d}Hz"))
+        wav = mp3.replace(".mp3", ".wav")
+        sh("ffmpeg", "-y", "-i", mp3, "-ar", str(SR), "-ac", "1", wav)
+        a = trim_silence(wav_read(wav))
+        a = a / (np.abs(a).max() + 1e-9) * 0.9
+        parts.append(a)
+        if not last:
+            pause = 0.38 if q else 0.28 if t.endswith(".") else 0.15
+            parts.append(np.zeros(int(pause * SR)))
+    joined = np.concatenate(parts)
+    tmp_in, tmp_out = os.path.join(WORK, f"j_{i}.wav"), os.path.join(WORK, f"h_{i}.wav")
+    wav_write(tmp_in, joined)
+    humanize(tmp_in, tmp_out)
+    return wav_read(tmp_out)
 
 
 def tts_all():
@@ -116,14 +168,14 @@ def tts_all():
     mode = os.environ.get("TTS", "auto")
     use_edge = mode in ("auto", "edge")
     paths = []
+    paths_are_edge = False
     if use_edge:
         try:
-            for i, s in enumerate(SCENES):
-                mp3 = os.path.join(WORK, f"vo_{i}.mp3")
-                asyncio.run(_edge(s["edge"], mp3))
+            for i, sc in enumerate(SCENES):
                 raw = os.path.join(WORK, f"vo_{i}.wav")
-                sh("ffmpeg", "-y", "-i", mp3, "-ar", str(SR), "-ac", "1", raw)
+                wav_write_mono(raw, edge_scene(i, sc["edge"]))
                 paths.append(raw)
+            paths_are_edge = True
             print("TTS: edge-tts (he-IL-HilaNeural, female)")
         except Exception as e:
             if mode == "edge":
@@ -145,9 +197,11 @@ def tts_all():
     # normalise loudness per clip (and speed up by SPEED, pitch preserved)
     clips = []
     for p in paths:
-        fast = p.replace(".wav", "_fast.wav")
-        sh("ffmpeg", "-y", "-i", p, "-af", f"atempo={SPEED}", fast)
-        a = wav_read(fast)
+        if not paths_are_edge:  # offline fallback voice only; the neural voice is already paced natively
+            fast = p.replace(".wav", "_fast.wav")
+            sh("ffmpeg", "-y", "-i", p, "-af", f"atempo={SPEED}", fast)
+            p = fast
+        a = wav_read(p)
         a = a / (np.abs(a).max() + 1e-9) * 0.92
         clips.append(a)
     return clips

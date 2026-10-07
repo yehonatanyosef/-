@@ -54,7 +54,7 @@ SCENES = [
          edge="לחצו על הלינק בביו, ומלאו שאלון זכאות קצר.",
          phon="[[lixts'u 'al halink babiy'o]], [[umil'u Seel'on zexa'ut kats'aR]]."),
 ]
-LEAD_IN, GAP, TAIL = 0.4, 0.25, 1.6
+LEAD_IN, GAP, TAIL = 0.4, 0.22, 1.4
 
 
 # ------------------------------------------------------------------- utils
@@ -98,8 +98,15 @@ def wav_write(path, x):
 
 # --------------------------------------------------------------------- TTS
 async def _edge(text, mp3):
-    import edge_tts
-    c = edge_tts.Communicate(text, "he-IL-HilaNeural", rate="-2%", pitch="+0Hz")
+    import edge_tts, ssl, aiohttp
+    kw = {}
+    proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy")
+    if proxy:  # sandbox/corporate proxy: route through it and trust its CA bundle
+        kw["proxy"] = proxy
+        ca = os.environ.get("SSL_CERT_FILE") or "/root/.ccr/ca-bundle.crt"
+        if os.path.exists(ca):
+            kw["connector"] = aiohttp.TCPConnector(ssl=ssl.create_default_context(cafile=ca))
+    c = edge_tts.Communicate(text, "he-IL-HilaNeural", rate="+14%", pitch="+0Hz", **kw)
     await asyncio.wait_for(c.save(mp3), timeout=25)
 
 

@@ -21,6 +21,12 @@ MAX_SECONDS = 40.0
 
 # ----------------------------------------------------------------- palette
 PALETTES = {
+    # Brand colours sampled from the questionnaire page (yehonatan-yosef.com): deep navy card + warm bronze-gold.
+    "brand": dict(label="צבעי המותג", bg=((27, 45, 78), (22, 36, 66), (11, 18, 34)), accent=(214, 172, 116),
+                  light=(238, 212, 172), deep=(184, 138, 77), darkest=(105, 72, 30), ink=(35, 26, 5),
+                  danger=(232, 100, 94), ok=(96, 196, 146), grey=(150, 162, 186), panel=(30, 48, 82),
+                  line=(92, 108, 140), track=(40, 58, 96), box=(9, 15, 30), foot=(176, 186, 206),
+                  bokeh=((214, 172, 116), (95, 125, 185), (238, 212, 172))),
     # name: bg top/mid/bottom, accent, accent-light, accent-deep, accent-darkest, ink (text on accent),
     #       danger, ok, grey, panel, panel-line, ring-track, subtitle-box rgb, footer, bokeh colours
     "navy": dict(label="נייבי וזהב", bg=((9, 24, 52), (16, 50, 96), (7, 15, 32)), accent=(255, 200, 61),
@@ -50,7 +56,7 @@ PALETTES = {
                      bokeh=((255, 150, 30), (120, 190, 255), (255, 215, 150))),
 }
 WHITE = (255, 255, 255)
-PAL_NAME = os.environ.get("PALETTE", "navy")
+PAL_NAME = os.environ.get("PALETTE", "brand")
 
 
 def set_palette(name):

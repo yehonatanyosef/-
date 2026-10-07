@@ -254,8 +254,54 @@ def edge_scene(i, text):
     return wav_read(tmp_out)
 
 
+def external_voice(n):
+    """Use narration recorded elsewhere (e.g. ElevenLabs) instead of built-in TTS.
+    Option 1: video/voice/1.mp3 ... N.mp3 (one file per scene, any audio format).
+    Option 2: a single file video/voice/voice.<ext>; it is split into N scenes at its N-1 longest pauses.
+    Returns a list of N float arrays, or None if no external voice is present."""
+    import glob
+    vdir = os.path.join(HERE, "voice")
+    if not os.path.isdir(vdir):
+        return None
+    def load(f):
+        tmp = os.path.join(WORK, "ext_" + os.path.basename(f) + ".wav")
+        sh("ffmpeg", "-y", "-i", f, "-ar", str(SR), "-ac", "1", tmp)
+        return wav_read(tmp)
+    per = [next(iter(glob.glob(os.path.join(vdir, f"{i + 1}.*"))), None) for i in range(n)]
+    if all(per):
+        return [trim_silence(load(f)) for f in per]
+    single = [f for f in glob.glob(os.path.join(vdir, "voice.*"))]
+    if not single:
+        return None
+    a = load(single[0])
+    win = int(0.02 * SR)
+    env = np.array([np.abs(a[i:i + win]).max() for i in range(0, len(a) - win, win)])
+    quiet = env < max(0.004, env.max() * 0.02)
+    runs, i = [], 0
+    while i < len(quiet):
+        if quiet[i]:
+            j = i
+            while j < len(quiet) and quiet[j]:
+                j += 1
+            if i > 0 and j < len(quiet):          # ignore leading/trailing silence
+                runs.append((j - i, i, j))
+            i = j
+        else:
+            i += 1
+    if len(runs) < n - 1:
+        raise SystemExit(f"voice.* has only {len(runs)} pauses but {n} scenes are needed: "
+                         "leave a clear pause (about 0.5s) between scenes, or provide 1.mp3..N.mp3")
+    cuts = sorted(sorted(runs, reverse=True)[: n - 1], key=lambda r: r[1])
+    bounds = [0] + [((r[1] + r[2]) // 2) * win for r in cuts] + [len(a)]
+    return [trim_silence(a[bounds[k]:bounds[k + 1]]) for k in range(n)]
+
+
 def tts_all():
     os.makedirs(WORK, exist_ok=True)
+    ext = external_voice(len(SCENES))
+    if ext is not None:
+        print("TTS: external voice from video/voice/")
+        return [c / (np.abs(c).max() + 1e-9) * 0.92 for c in ext]
     mode = os.environ.get("TTS", "auto")
     use_edge = mode in ("auto", "edge")
     paths = []

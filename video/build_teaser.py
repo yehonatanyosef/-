@@ -162,7 +162,7 @@ def wav_write_mono(path, x):
     wav_write(path, x)
 
 
-def trim_silence(a, thr=0.012, pad=0.03):
+def trim_silence(a, thr=0.0025, pad=0.09):
     idx = np.where(np.abs(a) > thr)[0]
     if len(idx) == 0:
         return a
@@ -176,14 +176,27 @@ def humanize(src, dst):
        "highpass=f=75,"
        "equalizer=f=180:t=q:w=1:g=2.5,"      # warmth
        "equalizer=f=3200:t=q:w=1.2:g=1.8,"   # presence / clarity
-       "deesser=i=0.35:m=0.5:f=0.5,"
+       "deesser=i=0.12:m=0.4:f=0.55,"
        "acompressor=threshold=0.12:ratio=2.2:attack=15:release=180:makeup=1.6,"
        "aecho=0.85:0.9:38|71:0.10|0.05,"     # very light room tone
        "lowpass=f=14000",
        dst)
 
 
+# Pronunciation hints for the neural voice (niqqud on words it tends to misread).
+# Only the spoken text is changed; on-screen subtitles stay unpointed.
+PRON = {
+    "בביו": "בַּבִּיאוֹ",  # add entries here only for words verified to be misread
+}
+
+
+def pronounce(text):
+    import re
+    return re.sub(r"[\u05d0-\u05ea]+", lambda m: PRON.get(m.group(0), m.group(0)), text)
+
+
 def edge_scene(i, text):
+    text = pronounce(text)
     """Synthesize sentence by sentence: questions rise, endings fall, natural pauses."""
     import re
     sents = [t.strip() for t in re.split(r"(?<=[.?!])\s+", text) if t.strip()]
@@ -192,7 +205,7 @@ def edge_scene(i, text):
         last = k == len(sents) - 1
         q = t.endswith("?")
         rate = 12 - (4 if last else 0) - (2 if q else 0)
-        pitch = (4 if q else 0) + (-3 if last and not q else 0) + (1 if k == 0 and not q else 0)
+        pitch = (2 if q else 0) + (-3 if last and not q else 0) + (1 if k == 0 and not q else 0)
         mp3 = os.path.join(WORK, f"vo_{i}_{k}.mp3")
         asyncio.run(_edge(t, mp3, rate=f"{rate:+d}%", pitch=f"{pitch:+d}Hz"))
         wav = mp3.replace(".mp3", ".wav")

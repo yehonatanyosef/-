@@ -99,7 +99,7 @@ def wav_write(path, x):
 # --------------------------------------------------------------------- TTS
 async def _edge(text, mp3):
     import edge_tts
-    c = edge_tts.Communicate(text, "he-IL-AvriNeural", rate="-2%", pitch="-3Hz")
+    c = edge_tts.Communicate(text, "he-IL-HilaNeural", rate="-2%", pitch="+0Hz")
     await asyncio.wait_for(c.save(mp3), timeout=25)
 
 
@@ -116,7 +116,7 @@ def tts_all():
                 raw = os.path.join(WORK, f"vo_{i}.wav")
                 sh("ffmpeg", "-y", "-i", mp3, "-ar", str(SR), "-ac", "1", raw)
                 paths.append(raw)
-            print("TTS: edge-tts (he-IL-AvriNeural)")
+            print("TTS: edge-tts (he-IL-HilaNeural, female)")
         except Exception as e:
             if mode == "edge":
                 raise

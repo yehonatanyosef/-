@@ -101,6 +101,25 @@ SCENES = [
          edge="לחצו על הלינק בַּבִּיאוֹ, ומלאו שאלון זכאות קצר.",
          phon="[[lixts'u 'al halink babiy'o]], [[umil'u Seel'on zexa'ut kats'aR]]."),
 ]
+
+# ---- Version B (A/B test): curiosity hook ("the state may owe you money") + tighter story.
+SCENES_B = [
+    dict(key="change",
+         text="מכרתם נכס ב[[6 השנים האחרונות]]? ייתכן שהמדינה חייבת לכם כסף.",
+         edge="מכרתם נכס בשש השנים האחרונות? ייתכן שהמדינה חייבת לכם כסף.", phon=""),
+    dict(key="max",
+         text="בעת המכירה רשות המיסים גובה את המקסימום. כברירת מחדל. והחישוב הזה קשיח.",
+         edge="בעת המכירה רשות המיסים גובה את המקסימום. כברירת מחדל. והחישוב הזה קשיח.", phon=""),
+    dict(key="lock",
+         text="מי שלא פועל, משאיר את [[העודף שלכם]] אצל המדינה. ואפשר למשוך רק עד [[6 שנים אחורה]]. אחרי זה, הכסף אבוד.",
+         edge="מי שלא פועל, משאיר את העודף שלכם אצל המדינה. ואפשר למשוך רק עד שש שנים אחורה. אחרי זה, הכסף אבוד.", phon=""),
+    SCENES[4],
+    SCENES[5],
+]
+VERSION = os.environ.get("SCRIPT", "A").upper()
+if VERSION == "B":
+    SCENES = SCENES_B
+
 LEAD_IN, GAP, TAIL = 0.35, 0.18, 1.3
 SPEED = 1.2  # global tempo of the narration (pitch preserved)
 
@@ -741,7 +760,7 @@ class Renderer:
 # -------------------------------------------------------------------- main
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=os.path.join(HERE, "teaser.mp4"))
+    ap.add_argument("--out", default=os.path.join(HERE, "teaser.mp4" if VERSION == "A" else f"teaser_{VERSION}.mp4"))
     ap.add_argument("--preview", type=float, default=None, help="render only first N seconds")
     args = ap.parse_args()
 

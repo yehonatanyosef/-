@@ -42,19 +42,20 @@ SCENES = [
          edge="והחישוב הזה קשיח. מי שלא פועל, משאיר את העודף שלכם בקופה של המדינה.",
          phon="[[vehaxiS'uv haz'e kaS'iax]]. [[mi Sel'o po'el]], [[maS'iR et ha'odef Selax'em]] [[bakup'a Sel hamedin'a]]."),
     dict(key="lock",
-         text="הכסף שלכם. אבל אפשר למשוך אותו רק עד [[6 שנים אחורה]]. אחרי זה, נעול.",
-         edge="הכסף שלכם. אבל אפשר למשוך אותו רק עד שש שנים אחורה. אחרי זה, נעול.",
-         phon="[[hak'esef Selax'em]]. [[av'al efS'aR limS'ox ot'o R'ak 'ad S'eS San'im axoR'a]]. [[axaR'ei z'e]], [[naul]]."),
+         text="הכסף שלכם. אבל אפשר למשוך אותו רק עד [[6 שנים אחורה]]. אחרי זה, הכסף אבוד.",
+         edge="הכסף שלכם. אבל אפשר למשוך אותו רק עד שש שנים אחורה. אחרי זה, הכסף אבוד.",
+         phon="[[hak'esef Selax'em]]. [[av'al efS'aR limS'ox ot'o R'ak 'ad S'eS San'im axoR'a]]. [[axaR'ei z'e]], [[hak'esef av'ud]]."),
     dict(key="free",
          text="הבדיקה אצלנו [[בחינם לגמרי]]. התשלום רק באחוזים מהכסף שחוזר בפועל. [[אפס סיכון]].",
          edge="הבדיקה אצלנו בחינם לגמרי. התשלום רק באחוזים מהכסף שחוזר בפועל. אפס סיכון.",
          phon="[[habdik'a etSel'enu bexin'am legamR'i]]. [[hatiSl'um R'ak ba'axuz'im mehak'esef Sexoz'eR bepo'al]]. [['efes sik'un]]."),
     dict(key="cta",
          text="לחצו על הלינק [[בביו]] ומלאו שאלון זכאות קצר.",
-         edge="לחצו על הלינק בביו, ומלאו שאלון זכאות קצר.",
+         edge="לחצו על הלינק בַּבִּיאוֹ, ומלאו שאלון זכאות קצר.",
          phon="[[lixts'u 'al halink babiy'o]], [[umil'u Seel'on zexa'ut kats'aR]]."),
 ]
-LEAD_IN, GAP, TAIL = 0.4, 0.22, 1.4
+LEAD_IN, GAP, TAIL = 0.35, 0.18, 1.3
+SPEED = 1.2  # global tempo of the narration (pitch preserved)
 
 
 # ------------------------------------------------------------------- utils
@@ -141,10 +142,12 @@ def tts_all():
                "silenceremove=start_periods=1:start_threshold=-45dB",
                out)
             paths.append(out)
-    # normalise loudness per clip
+    # normalise loudness per clip (and speed up by SPEED, pitch preserved)
     clips = []
     for p in paths:
-        a = wav_read(p)
+        fast = p.replace(".wav", "_fast.wav")
+        sh("ffmpeg", "-y", "-i", p, "-af", f"atempo={SPEED}", fast)
+        a = wav_read(fast)
         a = a / (np.abs(a).max() + 1e-9) * 0.92
         clips.append(a)
     return clips
@@ -453,7 +456,7 @@ def v_lock(fr, d, lt, dur):
         s = ease_back((lt - t_lock) / 0.35)
         pill(d, 540, 1190, 380 * s, 100 * s, RED)
         if s > 0.7:
-            text_c(d, "אחר כך: נעול", 540, 1190, 58, WHITE)
+            text_c(d, "אחר כך: אבוד", 540, 1190, 58, WHITE)
 
 
 def v_free(fr, d, lt, dur):

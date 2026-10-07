@@ -119,6 +119,12 @@ SCENES_B = [
 VERSION = os.environ.get("SCRIPT", "A").upper()
 if VERSION == "B":
     SCENES = SCENES_B
+# CTA=ad -> paid-ad flavour: points at the ad's button instead of "link in bio"
+AD = os.environ.get("CTA", "bio").lower() == "ad"
+if AD:
+    SCENES = SCENES[:-1] + [dict(key="cta",
+        text="לחצו על [[הכפתור למטה]] ומלאו שאלון זכאות קצר.",
+        edge="לחצו על הכפתור למטה, ומלאו שאלון זכאות קצר.", phon="")]
 
 LEAD_IN, GAP, TAIL = 0.35, 0.18, 1.3
 SPEED = 1.2  # global tempo of the narration (pitch preserved)
@@ -608,7 +614,24 @@ def v_free(fr, d, lt, dur):
             text_c(d, "אפס סיכון", 540, 1330, 62, WHITE)
 
 
+def v_cta_ad(fr, d, lt, dur, ov):
+    pulse = 1 + 0.045 * math.sin(lt * 6)
+    bob = 18 * math.sin(lt * 5)
+    pill(d, 540, 700, 880 * pulse, 190 * pulse, GOLD)
+    text_c(d, "לחצו כאן", 540, 700, int(112 * pulse), INK)
+    text_c(d, "שאלון זכאות קצר", 540, 880, 76, WHITE)
+    ax, ay = 540, 1090 + bob   # arrow pointing down at the ad button
+    d.polygon([(ax, ay + 110), (ax + 110, ay - 20), (ax + 45, ay - 20), (ax + 45, ay - 110),
+               (ax - 45, ay - 110), (ax - 45, ay - 20), (ax - 110, ay - 20)], fill=GOLD)
+
+
 def v_cta(fr, d, lt, dur, ov):
+    if AD:
+        return v_cta_ad(fr, d, lt, dur, ov)
+    return v_cta_bio(fr, d, lt, dur, ov)
+
+
+def v_cta_bio(fr, d, lt, dur, ov):
     pulse = 1 + 0.045 * math.sin(lt * 6)
     bob = 18 * math.sin(lt * 5)
     ax, ay = 540, 560 + bob
@@ -760,7 +783,7 @@ class Renderer:
 # -------------------------------------------------------------------- main
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=os.path.join(HERE, "teaser.mp4" if VERSION == "A" else f"teaser_{VERSION}.mp4"))
+    ap.add_argument("--out", default=os.path.join(HERE, f"teaser_{VERSION}{'_ad' if AD else ''}.mp4" if (VERSION != "A" or AD) else "teaser.mp4"))
     ap.add_argument("--preview", type=float, default=None, help="render only first N seconds")
     args = ap.parse_args()
 

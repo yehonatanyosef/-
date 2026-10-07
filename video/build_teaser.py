@@ -20,9 +20,56 @@ W, H, FPS, SR = 1080, 1920, 30, 44100
 MAX_SECONDS = 40.0
 
 # ----------------------------------------------------------------- palette
-NAVY_T, NAVY_M, NAVY_B = (9, 24, 52), (16, 50, 96), (7, 15, 32)
-GOLD, WHITE, RED, GREY = (255, 200, 61), (255, 255, 255), (255, 90, 95), (120, 138, 168)
-INK = (10, 24, 50)
+PALETTES = {
+    # name: bg top/mid/bottom, accent, accent-light, accent-deep, accent-darkest, ink (text on accent),
+    #       danger, ok, grey, panel, panel-line, ring-track, subtitle-box rgb, footer, bokeh colours
+    "navy": dict(label="נייבי וזהב", bg=((9, 24, 52), (16, 50, 96), (7, 15, 32)), accent=(255, 200, 61),
+                 light=(255, 235, 170), deep=(200, 140, 20), darkest=(120, 80, 0), ink=(10, 24, 50),
+                 danger=(255, 90, 95), ok=(40, 190, 130), grey=(120, 138, 168), panel=(18, 40, 78),
+                 line=(60, 90, 140), track=(30, 62, 108), box=(5, 12, 28), foot=(150, 170, 205),
+                 bokeh=((255, 200, 61), (80, 150, 255), (255, 235, 170))),
+    "emerald": dict(label="ירוק וזהב", bg=((4, 32, 30), (10, 78, 66), (3, 18, 18)), accent=(255, 205, 80),
+                    light=(255, 238, 180), deep=(200, 145, 30), darkest=(120, 80, 0), ink=(4, 36, 30),
+                    danger=(255, 107, 90), ok=(94, 234, 160), grey=(120, 160, 150), panel=(10, 58, 50),
+                    line=(50, 130, 110), track=(20, 80, 68), box=(2, 16, 15), foot=(150, 200, 190),
+                    bokeh=((255, 205, 80), (80, 220, 170), (255, 238, 180))),
+    "burgundy": dict(label="בורדו ושמנת", bg=((40, 8, 22), (92, 20, 48), (22, 4, 12)), accent=(244, 214, 150),
+                     light=(255, 240, 210), deep=(190, 140, 70), darkest=(110, 70, 20), ink=(46, 10, 26),
+                     danger=(255, 120, 110), ok=(120, 220, 160), grey=(170, 130, 150), panel=(70, 16, 38),
+                     line=(150, 70, 100), track=(88, 26, 52), box=(20, 3, 10), foot=(210, 170, 190),
+                     bokeh=((244, 214, 150), (230, 110, 150), (255, 240, 210))),
+    "contrast": dict(label="שחור וצהוב", bg=((8, 8, 10), (28, 28, 34), (4, 4, 6)), accent=(255, 224, 0),
+                     light=(255, 244, 150), deep=(190, 160, 0), darkest=(100, 80, 0), ink=(10, 10, 12),
+                     danger=(255, 80, 80), ok=(60, 220, 120), grey=(150, 150, 160), panel=(30, 30, 36),
+                     line=(110, 110, 120), track=(52, 52, 60), box=(0, 0, 0), foot=(180, 180, 190),
+                     bokeh=((255, 224, 0), (255, 255, 255), (255, 244, 150))),
+    "electric": dict(label="כחול וכתום", bg=((6, 20, 70), (20, 70, 190), (4, 12, 44)), accent=(255, 150, 30),
+                     light=(255, 215, 150), deep=(200, 100, 10), darkest=(120, 55, 0), ink=(10, 24, 70),
+                     danger=(255, 80, 100), ok=(60, 220, 160), grey=(140, 160, 210), panel=(16, 48, 130),
+                     line=(80, 130, 230), track=(30, 70, 160), box=(3, 10, 40), foot=(170, 190, 235),
+                     bokeh=((255, 150, 30), (120, 190, 255), (255, 215, 150))),
+}
+WHITE = (255, 255, 255)
+PAL_NAME = os.environ.get("PALETTE", "navy")
+
+
+def set_palette(name):
+    """Load palette `name` into module globals (call before rendering frames)."""
+    global PAL_NAME, PAL, NAVY_T, NAVY_M, NAVY_B, GOLD, RED, GREY, INK, LIGHT, DEEP, DARKEST, OKC
+    global PANEL, LINE, TRACK, BOX, FOOT, BG, BOKEH
+    PAL_NAME, PAL = name, PALETTES[name]
+    NAVY_T, NAVY_M, NAVY_B = PAL["bg"]
+    GOLD, RED, GREY, INK = PAL["accent"], PAL["danger"], PAL["grey"], PAL["ink"]
+    LIGHT, DEEP, DARKEST, OKC = PAL["light"], PAL["deep"], PAL["darkest"], PAL["ok"]
+    PANEL, LINE, TRACK, BOX, FOOT = PAL["panel"], PAL["line"], PAL["track"], PAL["box"], PAL["foot"]
+    BG = make_bg()
+    BOKEH = []
+    rng = np.random.default_rng(3)
+    for k in range(16):
+        r = int(rng.integers(70, 190))
+        BOKEH.append(dict(sprite=make_disc(r, PAL["bokeh"][k % 3], 0.16 if k % 3 == 0 else 0.13), r=r,
+                          x=rng.uniform(0, W), y=rng.uniform(0, H), sp=rng.uniform(18, 55),
+                          ph=rng.uniform(0, 6.28), amp=rng.uniform(20, 70)))
 
 # ------------------------------------------------------------------ script
 # text: on-screen subtitle, [[...]] = highlighted phrase.
@@ -370,15 +417,7 @@ def make_disc(r, color, a):
     return Image.new("RGB", (2 * r, 2 * r), color), Image.fromarray(m, "L")
 
 
-BG = make_bg()
-BOKEH = []
-_rng = np.random.default_rng(3)
-for k in range(16):
-    r = int(_rng.integers(70, 190))
-    col = [(255, 200, 61), (80, 150, 255), (255, 235, 170)][k % 3]
-    BOKEH.append(dict(sprite=make_disc(r, col, 0.16 if k % 3 == 0 else 0.13), r=r,
-                      x=_rng.uniform(0, W), y=_rng.uniform(0, H), sp=_rng.uniform(18, 55),
-                      ph=_rng.uniform(0, 6.28), amp=_rng.uniform(20, 70)))
+set_palette(PAL_NAME)
 
 
 def draw_background(frame, t):
@@ -395,9 +434,9 @@ def pill(d, cx, cy, w, h, fill, outline=None, ow=0):
 
 
 def coin(d, cx, cy, r):
-    d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=GOLD, outline=(200, 140, 20), width=6)
-    d.ellipse((cx - r * .74, cy - r * .74, cx + r * .74, cy + r * .74), outline=(230, 160, 30), width=4)
-    text_c(d, "₪", cx, cy - 2, int(r * 1.0), (150, 95, 10), rtl=False)
+    d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=GOLD, outline=DEEP, width=6)
+    d.ellipse((cx - r * .74, cy - r * .74, cx + r * .74, cy + r * .74), outline=DEEP, width=4)
+    text_c(d, "₪", cx, cy - 2, int(r * 1.0), DARKEST, rtl=False)
 
 
 def star(d, cx, cy, r, color):
@@ -405,7 +444,8 @@ def star(d, cx, cy, r, color):
                (cx, cy + r), (cx - r * .25, cy + r * .25), (cx - r, cy), (cx - r * .25, cy - r * .25)], fill=color)
 
 
-def lock(d, cx, cy, closed, s=1.0, color=GOLD):
+def lock(d, cx, cy, closed, s=1.0, color=None):
+    color = color or GOLD
     bw, bh = 240 * s, 190 * s
     sh_r = 80 * s
     lift = 0 if closed else 46 * s
@@ -423,11 +463,11 @@ def v_hook(fr, d, lt, dur):
     cx, cy, R = 540, 880, 270
     pop = ease_back(lt / 0.5)
     r = R * pop
-    d.ellipse((cx - r, cy - r, cx + r, cy + r), outline=(30, 62, 108), width=44)
+    d.ellipse((cx - r, cy - r, cx + r, cy + r), outline=TRACK, width=44)
     sweep = ease_out(lt / (dur * 0.85))
     d.arc((cx - r, cy - r, cx + r, cy + r), -90, -90 + 360 * sweep, fill=GOLD, width=44)
     if pop > 0.3:
-        text_c(d, "6", cx, cy - 40, 400, GOLD, rtl=False, stroke=6, stroke_fill=(120, 80, 0))
+        text_c(d, "6", cx, cy - 40, 400, GOLD, rtl=False, stroke=6, stroke_fill=DARKEST)
         text_c(d, "שנים", cx, cy + 160, 84, WHITE)
     # house
     hy = 470 - 20 * (1 - ease_out(lt / 0.6))
@@ -443,7 +483,7 @@ def v_max(fr, d, lt, dur):
     text_c(d, "מס שבח שנגבה", 540, 560, 70, WHITE)
     text_c(d, f"{int(round(100 * e))}%", 540, 770, 330, col, rtl=False, stroke=6, stroke_fill=(30, 10, 10))
     x0, x1, y0, y1 = 140, 940, 940, 1030
-    d.rounded_rectangle((x0, y0, x1, y1), radius=45, fill=(22, 44, 82), outline=(60, 90, 140), width=4)
+    d.rounded_rectangle((x0, y0, x1, y1), radius=45, fill=PANEL, outline=LINE, width=4)
     if e > 0.02:
         d.rounded_rectangle((x1 - (x1 - x0) * e, y0, x1, y1), radius=45, fill=col)
     if e >= 0.98:
@@ -454,7 +494,7 @@ def v_max(fr, d, lt, dur):
 
 def v_change(fr, d, lt, dur):
     x0, y0, x1, y1 = 170, 600, 910, 1080
-    d.rounded_rectangle((x0, y0, x1, y1), radius=60, fill=(18, 40, 78), outline=GOLD, width=8)
+    d.rounded_rectangle((x0, y0, x1, y1), radius=60, fill=PANEL, outline=GOLD, width=8)
     text_c(d, "קופת המדינה", 540, 535, 68, WHITE)
     rows = [(5, 1010), (4, 950), (3, 890), (2, 830), (1, 770)]
     pts = []
@@ -466,7 +506,7 @@ def v_change(fr, d, lt, dur):
         coin(d, px, py, 54)
     for k in range(5):
         a = lt * 1.3 + k * 1.26
-        star(d, 540 + 400 * math.cos(a), 840 + 280 * math.sin(a), 20 + 8 * math.sin(lt * 5 + k), (255, 235, 170))
+        star(d, 540 + 400 * math.cos(a), 840 + 280 * math.sin(a), 20 + 8 * math.sin(lt * 5 + k), LIGHT)
     if lt > dur * 0.35:
         s = ease_back((lt - dur * 0.35) / 0.4)
         bob = 10 * math.sin(lt * 5)
@@ -499,7 +539,7 @@ def v_lock(fr, d, lt, dur):
         else:
             ap = ease_out((lt - 0.12 - 6 * 0.28) / 0.3)
             if ap > 0:
-                fill = lerp((40, 62, 100), (70, 40, 55), 1 if closed else 0)
+                fill = lerp(PANEL, (70, 40, 55), 1 if closed else 0)
                 d.rounded_rectangle((x0, y0, x1, y1), radius=22, fill=fill, outline=GREY, width=4)
                 text_c(d, "7+", (x0 + x1) / 2, (y0 + y1) / 2, 70, GREY if not closed else RED, rtl=False)
     shake = 8 * math.sin((lt - t_lock) * 50) * max(0, 1 - (lt - t_lock) * 4) if closed else 0
@@ -517,13 +557,13 @@ def v_free(fr, d, lt, dur):
     cx, cy = 540, 780
     s = ease_back(lt / 0.55)
     R = 255 * s
-    d.ellipse((cx - R - 24, cy - R - 24, cx + R + 24, cy + R + 24), outline=(255, 235, 170), width=8)
+    d.ellipse((cx - R - 24, cy - R - 24, cx + R + 24, cy + R + 24), outline=LIGHT, width=8)
     d.ellipse((cx - R, cy - R, cx + R, cy + R), fill=GOLD)
     if s > 0.6:
         text_c(d, "₪0", cx, cy - 10, 290, INK, rtl=False)
     for k in range(6):
         a = lt * 1.1 + k * math.pi / 3
-        star(d, cx + 360 * math.cos(a), cy + 360 * math.sin(a), 22, (255, 235, 170))
+        star(d, cx + 360 * math.cos(a), cy + 360 * math.sin(a), 22, LIGHT)
     if lt > 1.3:
         p = ease_back((lt - 1.3) / 0.4)
         pill(d, 540, 1160, 900 * p, 130 * p, WHITE)
@@ -531,7 +571,7 @@ def v_free(fr, d, lt, dur):
             text_c(d, "תשלום רק באחוזים מההחזר", 540, 1160, 58, INK)
     if lt > dur * 0.78:
         p = ease_back((lt - dur * 0.78) / 0.4)
-        pill(d, 540, 1330, 520 * p, 100 * p, (40, 190, 130))
+        pill(d, 540, 1330, 520 * p, 100 * p, OKC)
         if p > 0.75:
             text_c(d, "אפס סיכון", 540, 1330, 62, WHITE)
 
@@ -545,7 +585,7 @@ def v_cta(fr, d, lt, dur, ov):
         rp = ((lt * 0.9 + k * 0.5) % 1.0)
         rr = 1 + rp * 0.35
         ov.rounded_rectangle((540 - 440 * rr, 900 - 95 * rr, 540 + 440 * rr, 900 + 95 * rr), radius=95 * rr,
-                             outline=(255, 200, 61, int(160 * (1 - rp))), width=6)
+                             outline=GOLD + (int(160 * (1 - rp)),), width=6)
     w, h = 880 * pulse, 190 * pulse
     pill(d, 540, 900, w, h, GOLD)
     text_c(d, "הלינק בביו", 540, 900, int(108 * pulse), INK)
@@ -633,7 +673,7 @@ class Renderer:
         ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         od = ImageDraw.Draw(ov)
         # header
-        od.rounded_rectangle((90, 100, 990, 210), radius=55, fill=(5, 12, 28, 175), outline=(255, 200, 61, 255), width=4)
+        od.rounded_rectangle((90, 100, 990, 210), radius=55, fill=BOX + (175,), outline=GOLD + (255,), width=4)
         fr.paste(ov, (0, 0), ov)
         ov = Image.new("RGBA", (W, H), (0, 0, 0, 0)); od = ImageDraw.Draw(ov)
         d = ImageDraw.Draw(fr)
@@ -670,7 +710,7 @@ class Renderer:
             lines.append(line)
             lh = int(size * 1.28)
             top = 1500 - lh * len(lines) / 2 - 20
-            od.rounded_rectangle((40, top, 1040, top + lh * len(lines) + 60), radius=50, fill=(5, 12, 28, 175))
+            od.rounded_rectangle((40, top, 1040, top + lh * len(lines) + 60), radius=50, fill=BOX + (175,))
             fr.paste(ov, (0, 0), ov)
             d = ImageDraw.Draw(fr)
             y = top + 30 + size
@@ -681,7 +721,7 @@ class Renderer:
             fr.paste(ov, (0, 0), ov)
         d = ImageDraw.Draw(fr)
         # footer
-        text_c(d, "*בכפוף לבדיקת זכאות אישית", 540, 1830, 36, (150, 170, 205))
+        text_c(d, "*בכפוף לבדיקת זכאות אישית", 540, 1830, 36, FOOT)
         return np.asarray(fr)
 
 
@@ -692,6 +732,7 @@ def main():
     ap.add_argument("--preview", type=float, default=None, help="render only first N seconds")
     args = ap.parse_args()
 
+    set_palette(PAL_NAME)
     clips = tts_all()
     durs = [len(c) / SR for c in clips]
     gap = GAP

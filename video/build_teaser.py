@@ -133,6 +133,8 @@ if AD:
         edge="לחצו על הכפתור למטה, ומלאו שאלון זכאות קצר.", phon="")]
 
 LEAD_IN, GAP, TAIL = 0.35, 0.18, 1.3
+PITCH_SPAN, PITCH_JIT = 10, 4   # Hz offsets that shape phrase intonation
+BASE_RATE = 6   # neural-voice speaking rate (% vs normal)
 SPEED = 1.2  # global tempo of the narration (pitch preserved)
 
 
@@ -209,7 +211,7 @@ def humanize(src, dst):
        "equalizer=f=3200:t=q:w=1.2:g=1.8,"   # presence / clarity
        "deesser=i=0.12:m=0.4:f=0.55,"
        "acompressor=threshold=0.12:ratio=2.2:attack=15:release=180:makeup=1.6,"
-       "aecho=0.85:0.9:38|71:0.10|0.05,"     # very light room tone
+       "vibrato=f=5.3:d=0.025,"              # faint natural pitch wobble
        "lowpass=f=14000",
        dst)
 
@@ -226,32 +228,78 @@ def pronounce(text):
     return re.sub(r"[\u05d0-\u05ea]+", lambda m: PRON.get(m.group(0), m.group(0)), text)
 
 
+def _fade(a, ms=8):
+    n = min(len(a) // 2, int(ms / 1000 * SR))
+    if n > 0:
+        a = a.copy(); a[:n] *= np.linspace(0, 1, n); a[-n:] *= np.linspace(1, 0, n)
+    return a
+
+
+def _breath(rng, level=0.035, dur=0.26):
+    """Soft inhale: band-limited noise with a slow attack and decay."""
+    n = int(dur * SR)
+    x = rng.standard_normal(n)
+    spec = np.fft.rfft(x); f = np.fft.rfftfreq(n, 1 / SR)
+    spec *= ((f > 250) & (f < 3500)) / (1 + f / 1200)
+    x = np.fft.irfft(spec, n)
+    t = np.linspace(0, 1, n)
+    env = np.minimum(1, t / 0.35) ** 2 * np.exp(-3.0 * np.maximum(t - 0.35, 0))
+    x = x * env
+    return x / (np.abs(x).max() + 1e-9) * level
+
+
+def _room(x, rng):
+    """Very short synthetic room impulse response + faint room tone (no digital silence)."""
+    n = int(0.28 * SR)
+    ir = rng.standard_normal(n) * np.exp(-np.linspace(0, 1, n) * 9)
+    ir[0] = 0
+    wet = np.fft.irfft(np.fft.rfft(x, len(x) + n) * np.fft.rfft(ir, len(x) + n))[: len(x)]
+    wet = wet / (np.abs(wet).max() + 1e-9) * np.abs(x).max()
+    y = x + 0.10 * wet
+    tone = rng.standard_normal(len(x))
+    spec = np.fft.rfft(tone); f = np.fft.rfftfreq(len(x), 1 / SR)
+    tone = np.fft.irfft(spec / np.sqrt(np.maximum(f, 40)), len(x))
+    tone = tone / (np.abs(tone).max() + 1e-9) * 0.0035
+    return y + tone
+
+
 def edge_scene(i, text):
-    text = pronounce(text)
-    """Synthesize sentence by sentence: questions rise, endings fall, natural pauses."""
+    """Phrase-by-phrase synthesis with varied pitch/pace, breaths, room tone and gentle polish."""
     import re
+    text = pronounce(text)
+    rng = np.random.default_rng(100 + i)
     sents = [t.strip() for t in re.split(r"(?<=[.?!])\s+", text) if t.strip()]
-    parts = []
-    for k, t in enumerate(sents):
-        last = k == len(sents) - 1
-        q = t.endswith("?")
-        rate = 12 - (4 if last else 0) - (2 if q else 0)
-        pitch = (2 if q else 0) + (-3 if last and not q else 0) + (1 if k == 0 and not q else 0)
-        mp3 = os.path.join(WORK, f"vo_{i}_{k}.mp3")
-        asyncio.run(_edge(t, mp3, rate=f"{rate:+d}%", pitch=f"{pitch:+d}Hz"))
-        wav = mp3.replace(".mp3", ".wav")
-        sh("ffmpeg", "-y", "-i", mp3, "-ar", str(SR), "-ac", "1", wav)
-        a = trim_silence(wav_read(wav))
-        a = a / (np.abs(a).max() + 1e-9) * 0.9
-        parts.append(a)
-        if not last:
-            pause = 0.38 if q else 0.28 if t.endswith(".") else 0.15
-            parts.append(np.zeros(int(pause * SR)))
+    parts, nsent = [], len(sents)
+    for k, sent in enumerate(sents):
+        phrases = [x.strip() for x in re.split(r"(?<=,)\s+", sent) if x.strip()]
+        last_sent, q = k == nsent - 1, sent.endswith("?")
+        if k > 0:
+            gap = float(rng.uniform(0.30, 0.42))
+            br = _breath(rng) if gap >= 0.3 else np.zeros(0)
+            parts.append(np.zeros(int(max(0.0, gap - len(br) / SR) * SR))); parts.append(br)
+            parts.append(np.zeros(int(0.03 * SR)))
+        for m, ph in enumerate(phrases):
+            last_ph = m == len(phrases) - 1
+            rate = int(round(BASE_RATE + rng.integers(-3, 4) - (3 if last_ph and last_sent else 0)))
+            pitch = (PITCH_SPAN if m == 0 else 0) + int(rng.integers(-PITCH_JIT, PITCH_JIT + 1))
+            if last_ph and q:
+                pitch += 2 * PITCH_SPAN
+            elif last_ph:
+                pitch -= PITCH_SPAN
+            mp3 = os.path.join(WORK, f"vo_{i}_{k}_{m}.mp3")
+            asyncio.run(_edge(ph, mp3, rate=f"{rate:+d}%", pitch=f"{pitch:+d}Hz"))
+            wav = mp3.replace(".mp3", ".wav")
+            sh("ffmpeg", "-y", "-i", mp3, "-ar", str(SR), "-ac", "1", wav)
+            a = _fade(trim_silence(wav_read(wav)))
+            a = a / (np.abs(a).max() + 1e-9) * 0.9 * 10 ** (float(rng.uniform(-1.2, 0.6)) / 20)
+            parts.append(a)
+            if not last_ph:
+                parts.append(np.zeros(int(float(rng.uniform(0.10, 0.19)) * SR)))
     joined = np.concatenate(parts)
     tmp_in, tmp_out = os.path.join(WORK, f"j_{i}.wav"), os.path.join(WORK, f"h_{i}.wav")
     wav_write(tmp_in, joined)
     humanize(tmp_in, tmp_out)
-    return wav_read(tmp_out)
+    return _room(wav_read(tmp_out), rng)
 
 
 def external_voice(n):

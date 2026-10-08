@@ -263,7 +263,26 @@ def _room(x, rng):
     return y + tone
 
 
+VOICE_STYLE = os.environ.get("VOICE_STYLE", "classic")   # classic = the version approved as best; studio = processed experiment
+
+
+def edge_scene_classic(i, text):
+    """One plain call per scene (HilaNeural, +14%), no post-processing: the approved voice."""
+    text = pronounce(text)
+    mp3 = os.path.join(WORK, f"vo_{i}.mp3")
+    asyncio.run(_edge(text, mp3, rate="+14%", pitch="+0Hz"))
+    wav = os.path.join(WORK, f"vo_{i}_c.wav")
+    sh("ffmpeg", "-y", "-i", mp3, "-ar", str(SR), "-ac", "1", wav)
+    return wav_read(wav)
+
+
 def edge_scene(i, text):
+    if VOICE_STYLE == "classic":
+        return edge_scene_classic(i, text)
+    return edge_scene_studio(i, text)
+
+
+def edge_scene_studio(i, text):
     """Phrase-by-phrase synthesis with varied pitch/pace, breaths, room tone and gentle polish."""
     import re
     text = pronounce(text)

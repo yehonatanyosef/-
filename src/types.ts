@@ -83,6 +83,10 @@ export interface ItemProgress {
   wrong: number;
   due: number; // epoch ms
   last: number; // epoch ms
+  /** When the item was first practised. */
+  first?: number;
+  /** When it was first remembered on a later day (reached box 3). */
+  recalled?: number;
 }
 
 export interface StageResult {
@@ -146,6 +150,8 @@ export interface DailyMission {
   games: number;
   /** A practice (review) session was played today. */
   practiced: boolean;
+  /** New things (words, letters, phrases…) met for the first time today. */
+  newWords?: number;
 }
 
 export interface IslandState {

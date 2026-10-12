@@ -40,6 +40,11 @@ export function MissionCard({
           <Emoji char="🎁" size={30} />
         </span>
       </div>
+      <div className={`mission-words ${status.newWords >= status.newWordsGoal ? 'done' : ''}`}>
+        {status.newWords >= status.newWordsGoal
+          ? `🆕 למדתם היום ${status.newWords} דברים חדשים – כל הכבוד!`
+          : `🆕 דברים חדשים היום: ${status.newWords}/${status.newWordsGoal}`}
+      </div>
       {weeklyReady ? (
         <button type="button" className="mission-btn weekly pulse" onClick={() => onChest('weekly')}>
           💎 פתחו את התיבה השבועית!

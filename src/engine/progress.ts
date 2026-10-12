@@ -6,7 +6,7 @@ import { WORDS_BY_ID } from '../data/words';
 import { SKILLS, type DailyMission, type Island, type Profile, type Skill, type Stage } from '../types';
 import { checkAchievements } from './achievements';
 import { clamp } from './random';
-import { isLearned, isMastered, review } from './srs';
+import { isLearned, isRemembered, review } from './srs';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -155,9 +155,9 @@ export function todayMission(profile: Profile, now = Date.now()): DailyMission {
 }
 
 /** Counts a finished game towards today's mission. */
-export function recordGame(profile: Profile, practice: boolean, now = Date.now()): DailyMission {
+export function recordGame(profile: Profile, practice: boolean, now = Date.now(), newWords = 0): DailyMission {
   const m = todayMission(profile, now);
-  return { ...m, games: m.games + 1, practiced: m.practiced || practice };
+  return { ...m, games: m.games + 1, practiced: m.practiced || practice, newWords: (m.newWords ?? 0) + newWords };
 }
 
 /* ---------- Lesson results ---------- */
@@ -188,6 +188,12 @@ export interface LessonRewards {
   streak: number;
   streakIncreased: boolean;
   learnedNow: string[];
+  /** Words met for the first time in this lesson. */
+  newWords: string[];
+  /** Everything met for the first time (words, letters, phrases, sentences…). */
+  newItems: string[];
+  /** Words answered correctly on a later day for the first time – proven learned. */
+  rememberedNow: string[];
 }
 
 export function starsFor(accuracy: number): number {
@@ -207,6 +213,8 @@ export function applyLesson(profile: Profile, outcome: LessonOutcome, now = Date
   const skill = { ...profile.skill };
   const skillCount = { ...profile.skillCount };
   const learnedBefore = new Set(Object.keys(items).filter((id) => isLearned(items[id])));
+  const rememberedBefore = new Set(Object.keys(items).filter((id) => isRemembered(items[id])));
+  const unseenBefore = new Set(outcome.answers.map((a) => a.itemId).filter((id): id is string => !!id && !(items[id]?.seen > 0)));
   for (const a of outcome.answers) {
     if (a.itemId) items[a.itemId] = review(items[a.itemId], a.correct, now);
     if (a.first && a.skill && (SKILLS as string[]).includes(a.skill)) {
@@ -217,6 +225,10 @@ export function applyLesson(profile: Profile, outcome: LessonOutcome, now = Date
     }
   }
   const learnedNow = Object.keys(items).filter((id) => isLearned(items[id]) && !learnedBefore.has(id) && WORDS_BY_ID[id]);
+  const byWord = (ids: string[]) => [...new Map(ids.filter((id) => WORDS_BY_ID[id]).map((id) => [WORDS_BY_ID[id].en, id])).values()];
+  const newWords = byWord([...unseenBefore]);
+  const newItems = [...newWords, ...[...unseenBefore].filter((id) => !WORDS_BY_ID[id])];
+  const rememberedNow = byWord(Object.keys(items).filter((id) => isRemembered(items[id]) && !rememberedBefore.has(id)));
 
   // Ability: nudged by how the lesson went relative to a 75% target.
   const delta = clamp((accuracy - 0.75) * (outcome.boss ? 0.6 : 0.4), -0.2, 0.15);
@@ -266,7 +278,7 @@ export function applyLesson(profile: Profile, outcome: LessonOutcome, now = Date
     perfectLessons: profile.perfectLessons + (perfect ? 1 : 0),
     spokenCorrect: profile.spokenCorrect + spoken,
     totalSeconds: profile.totalSeconds + outcome.seconds,
-    daily: recordGame(profile, !outcome.stageId, now),
+    daily: recordGame(profile, !outcome.stageId, now, newItems.length),
   };
   const newAchievements = checkAchievements(next);
   if (newAchievements.length) next = { ...next, achievements: [...next.achievements, ...newAchievements] };
@@ -284,26 +296,14 @@ export function applyLesson(profile: Profile, outcome: LessonOutcome, now = Date
       streak,
       streakIncreased,
       learnedNow,
+      newWords,
+      newItems,
+      rememberedNow,
     },
   };
 }
 
 /* ---------- Stats for the parent dashboard ---------- */
-
-export function wordStats(profile: Profile) {
-  const ids = Object.keys(profile.items).filter((id) => WORDS_BY_ID[id]);
-  const learnedEn = new Set<string>();
-  const masteredEn = new Set<string>();
-  const seenEn = new Set<string>();
-  for (const id of ids) {
-    const p = profile.items[id];
-    const en = WORDS_BY_ID[id].en;
-    if (p.seen > 0) seenEn.add(en);
-    if (isLearned(p)) learnedEn.add(en);
-    if (isMastered(p)) masteredEn.add(en);
-  }
-  return { seen: seenEn.size, learned: learnedEn.size, mastered: masteredEn.size };
-}
 
 export function todayXp(profile: Profile, now = Date.now()): number {
   return profile.activity[dayKey(now)]?.xp ?? 0;

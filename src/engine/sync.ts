@@ -11,7 +11,12 @@ function mergeItems(a: Record<string, ItemProgress>, b: Record<string, ItemProgr
   const out = { ...a };
   for (const [id, p] of Object.entries(b)) {
     const q = out[id];
-    if (!q || p.last > q.last || (p.last === q.last && p.seen > q.seen)) out[id] = p;
+    const best = !q || p.last > q.last || (p.last === q.last && p.seen > q.seen) ? p : q;
+    // Milestones keep the earliest time seen on either device.
+    const early = (x?: number, y?: number) => (x === undefined ? y : y === undefined ? x : Math.min(x, y));
+    const first = early(p.first, q?.first);
+    const recalled = early(p.recalled, q?.recalled);
+    out[id] = { ...best, ...(first !== undefined && { first }), ...(recalled !== undefined && { recalled }) };
   }
   return out;
 }

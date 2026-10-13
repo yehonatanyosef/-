@@ -7,7 +7,7 @@ import { DECOR, DECOR_BY_ID, type Decor } from '../data/decor';
 import { ALL_WORDS, WORDS_BY_ID } from '../data/words';
 import type { IslandState, Profile } from '../types';
 import { pick, type Rng } from './random';
-import { isLearned } from './srs';
+import { isLearned, isMastered, isRemembered } from './srs';
 
 export interface IslandItem {
   id: string; // "w:<english word>" or "d:<decor id>"
@@ -71,6 +71,19 @@ export function newIslandWords(itemIds: string[]): IslandItem[] {
     if (item) out.set(item.id, item);
   }
   return [...out.values()];
+}
+
+/** How well the child knows an island word: still learning, remembered on a later day, or mastered. */
+export function itemMastery(profile: Profile, itemId: string): 'learning' | 'remembered' | 'mastered' | null {
+  if (!itemId.startsWith('w:')) return null;
+  const en = itemId.slice(2);
+  let best: 'learning' | 'remembered' | 'mastered' = 'learning';
+  for (const [id, prog] of Object.entries(profile.items)) {
+    if (WORDS_BY_ID[id]?.en !== en) continue;
+    if (isMastered(prog)) return 'mastered';
+    if (isRemembered(prog)) best = 'remembered';
+  }
+  return best;
 }
 
 /* ---------- Size: the island grows as the child collects more ---------- */

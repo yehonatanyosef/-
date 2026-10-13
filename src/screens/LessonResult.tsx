@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BigButton, Companion, En } from '../components/common';
+import { LETTERS_BY_ID } from '../data/letters';
 import { WORDS_BY_ID } from '../data/words';
 import { ACHIEVEMENTS_BY_ID } from '../engine/achievements';
 import { celebrate, stars as starBurst } from '../engine/effects';
@@ -126,18 +127,22 @@ export function LessonResult({
         </div>
       )}
 
-      {rewards.learnedNow.length > 0 && (
-        <div className="learned">
-          <div className="learned-title">{toIsland ? 'מילים שלמדתם – הן מחכות לכם בתיק באי 🏝️' : 'מילים שלמדתם:'}</div>
-          <div className="learned-list">
-            {rewards.learnedNow.slice(0, 12).map((id) => (
-              <span key={id} className="learned-chip">
-                {WORDS_BY_ID[id].emoji ? <Emoji char={WORDS_BY_ID[id].emoji} size={26} /> : '🎨'} <En>{WORDS_BY_ID[id].en}</En>
-              </span>
-            ))}
-          </div>
-        </div>
+      {rewards.rememberedNow.length > 0 && (
+        <WordList
+          className="remembered pop-in"
+          title={`🧠 זכרתם ${rewards.rememberedNow.length === 1 ? 'מילה' : `${rewards.rememberedNow.length} מילים`} מימים קודמים – עכשיו הן באמת שלכם!`}
+          ids={rewards.rememberedNow}
+        />
       )}
+
+      {rewards.newItems.length > 0 && (
+        <WordList
+          title={rewards.newWords.length === rewards.newItems.length ? `🆕 ${rewards.newWords.length === 1 ? 'מילה חדשה' : `${rewards.newWords.length} מילים חדשות`} שפגשתם היום` : `🆕 ${rewards.newItems.length} דברים חדשים שלמדתם היום`}
+          ids={rewards.newItems}
+        />
+      )}
+
+      {toIsland > 0 && <div className="result-island">🧺 {toIsland === 1 ? 'מילה אחת נכנסה' : `${toIsland} מילים נכנסו`} לתיק באי שלכם 🏝️</div>}
 
       {rewards.newAchievements.map((id) => (
         <div key={id} className="achievement-pop pop-in">
@@ -154,6 +159,32 @@ export function LessonResult({
         <BigButton color="blue" onClick={onReplay}>
           🔄 שוב
         </BigButton>
+      </div>
+    </div>
+  );
+}
+
+function WordList({ title, ids, className = '' }: { title: string; ids: string[]; className?: string }) {
+  return (
+    <div className={`learned ${className}`}>
+      <div className="learned-title">{title}</div>
+      <div className="learned-list">
+        {ids
+          .filter((id) => WORDS_BY_ID[id] || LETTERS_BY_ID[id])
+          .slice(0, 12)
+          .map((id) =>
+            WORDS_BY_ID[id] ? (
+              <span key={id} className="learned-chip">
+                {WORDS_BY_ID[id].emoji ? <Emoji char={WORDS_BY_ID[id].emoji} size={26} /> : '🎨'} <En>{WORDS_BY_ID[id].en}</En>
+              </span>
+            ) : (
+              <span key={id} className="learned-chip letter-chip">
+                <En>
+                  {LETTERS_BY_ID[id].upper} {LETTERS_BY_ID[id].lower}
+                </En>
+              </span>
+            ),
+          )}
       </div>
     </div>
   );

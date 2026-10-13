@@ -16,7 +16,11 @@ export function newProgress(now: number): ItemProgress {
 export function review(prev: ItemProgress | undefined, correct: boolean, now: number): ItemProgress {
   const p = prev ?? newProgress(now);
   const box = correct ? Math.min(MAX_BOX, p.box + 1) : Math.max(1, p.box - 2);
+  const first = p.first ?? (p.seen === 0 ? now : undefined);
+  const recalled = p.recalled ?? (box >= REMEMBERED_BOX ? now : undefined);
   return {
+    ...(first !== undefined && { first }),
+    ...(recalled !== undefined && { recalled }),
     box,
     seen: p.seen + 1,
     correct: p.correct + (correct ? 1 : 0),
@@ -24,6 +28,21 @@ export function review(prev: ItemProgress | undefined, correct: boolean, now: nu
     due: now + (correct ? INTERVALS[box] : MINUTE),
     last: now,
   };
+}
+
+/**
+ * Box 3 can only be reached by answering correctly a day or more after the word was
+ * practised – so it means the child really remembers it, not just from the same lesson.
+ */
+export const REMEMBERED_BOX = 3;
+
+export function isRemembered(p: ItemProgress | undefined): boolean {
+  return !!p && p.box >= REMEMBERED_BOX;
+}
+
+/** Answered wrongly and back in the lowest box – needs more practice. */
+export function isStruggling(p: ItemProgress | undefined): boolean {
+  return !!p && p.seen > 0 && p.wrong > 0 && p.box <= 1;
 }
 
 export function isLearned(p: ItemProgress | undefined): boolean {

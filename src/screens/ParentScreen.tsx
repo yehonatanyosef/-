@@ -6,8 +6,9 @@ import { APP_VERSION } from '../engine/updates';
 import { BigButton, En, Modal } from '../components/common';
 import type { CloudSync } from '../hooks/useCloudSync';
 import { ISLANDS } from '../data/islands';
-import { WORDS_BY_ID } from '../data/words';
-import { dayKey, isIslandUnlocked, levelLabel, stageDone, wordStats } from '../engine/progress';
+import { dayKey, isIslandUnlocked, levelLabel, stageDone } from '../engine/progress';
+import { learningReport } from '../engine/learning';
+import { LearningPanel } from '../components/LearningPanel';
 import { canRecognize, canSpeak } from '../engine/speech';
 import { SKILLS, type AppData, type Profile, type Settings, type Skill } from '../types';
 
@@ -103,14 +104,8 @@ export function ParentScreen({
 
   if (!passed) return <ParentGate onPass={() => setPassed(true)} onBack={onBack} />;
 
-  const stats = p ? wordStats(p) : null;
+  const report = p ? learningReport(p) : null;
   const level = p ? levelLabel(p.ability) : null;
-  const weak = p
-    ? Object.entries(p.items)
-        .filter(([id, it]) => WORDS_BY_ID[id] && it.wrong > 0)
-        .sort((x, y) => y[1].wrong - y[1].correct * 0.5 - (x[1].wrong - x[1].correct * 0.5))
-        .slice(0, 10)
-    : [];
   const maxMin = Math.max(5, ...days.map((d) => d.minutes));
   const stagesDone = p ? Object.values(p.stages).filter((s) => s.stars > 0).length : 0;
   const totalStages = ISLANDS.reduce((s, i) => s + i.stages.length, 0);
@@ -135,7 +130,7 @@ export function ParentScreen({
         </div>
       )}
 
-      {p && stats && level && (
+      {p && report && level && (
         <>
           <section className="card kpis">
             <div className="kpi">
@@ -145,12 +140,12 @@ export function ParentScreen({
               </small>
             </div>
             <div className="kpi">
-              <b>{stats.learned}</b>
+              <b>{report.counts.remembered + report.counts.mastered}</b>
               <small>מילים שנלמדו</small>
             </div>
             <div className="kpi">
-              <b>{stats.mastered}</b>
-              <small>מילים בשליטה מלאה</small>
+              <b>{report.thisWeek.met}</b>
+              <small>מילים חדשות השבוע</small>
             </div>
             <div className="kpi">
               <b>
@@ -167,6 +162,8 @@ export function ParentScreen({
               <small>ימים ברצף (שיא {p.bestStreak})</small>
             </div>
           </section>
+
+          <LearningPanel profile={p} />
 
           <section className="card">
             <h3>התקדמות ברמה</h3>
@@ -237,25 +234,6 @@ export function ParentScreen({
             </div>
           </section>
 
-          <section className="card">
-            <h3>מילים שכדאי לחזק</h3>
-            {weak.length === 0 ? (
-              <p className="muted">אין עדיין מילים מאתגרות במיוחד 👏</p>
-            ) : (
-              <div className="weak-list">
-                {weak.map(([id, it]) => (
-                  <span key={id} className="learned-chip">
-                    {WORDS_BY_ID[id].emoji || '🎨'} <En>{WORDS_BY_ID[id].en}</En> · {WORDS_BY_ID[id].he}
-                    <small>
-                      {' '}
-                      ({it.correct}✓ {it.wrong}✗)
-                    </small>
-                  </span>
-                ))}
-              </div>
-            )}
-            <p className="muted">מילים אלו חוזרות אוטומטית בתרגול (שיטת חזרה מרווחת).</p>
-          </section>
 
           <section className="card actions">
             <h3>ניהול שחקן</h3>

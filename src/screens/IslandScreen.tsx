@@ -3,10 +3,13 @@ import { BigButton, Companion, En } from '../components/common';
 import { Emoji } from '../components/Emoji';
 import { COMPANIONS_BY_ID } from '../data/companions';
 import { burst } from '../engine/effects';
-import { bagItems, collectedItems, islandItem, islandSize, islandSlots, placeItem, removeItem, type IslandItem } from '../engine/island';
+import { bagItems, collectedItems, itemMastery, islandItem, islandSize, islandSlots, placeItem, removeItem, type IslandItem } from '../engine/island';
 import { sfx } from '../engine/sound';
 import { speak } from '../engine/speech';
 import type { Profile } from '../types';
+
+const MASTERY_BADGE = { learning: '', remembered: '🧠', mastered: '👑' };
+const MASTERY_TEXT = { learning: '🌱 בלמידה', remembered: '🧠 זוכרים', mastered: '👑 שולטים' };
 
 /** The child's own island: learned words and chest prizes to place, tap anything to hear its name. */
 export function IslandScreen({ profile, onUpdate, onBack, onPlay }: { profile: Profile; onUpdate: (p: Profile) => void; onBack: () => void; onPlay: () => void }) {
@@ -86,6 +89,9 @@ export function IslandScreen({ profile, onUpdate, onBack, onPlay }: { profile: P
                 >
                   {item ? <Emoji char={item.emoji} size={size.cols >= 5 ? 44 : 54} label={item.en} /> : <span className="isle-tile-dot" />}
                   {item?.rare && <i className="sparkle">✨</i>}
+                  {item && MASTERY_BADGE[itemMastery(profile, item.id) ?? 'learning'] && (
+                    <i className="mastery">{MASTERY_BADGE[itemMastery(profile, item.id) ?? 'learning']}</i>
+                  )}
                 </button>
               );
             })}
@@ -101,7 +107,10 @@ export function IslandScreen({ profile, onUpdate, onBack, onPlay }: { profile: P
           <Emoji char={pickedItem.emoji} size={40} />
           <div>
             <En className="bubble-en">{pickedItem.en}</En>
-            <span className="bubble-he">{pickedItem.he}</span>
+            <span className="bubble-he">
+              {pickedItem.he}
+              {itemMastery(profile, pickedItem.id) && ` · ${MASTERY_TEXT[itemMastery(profile, pickedItem.id)!]}`}
+            </span>
           </div>
           <button type="button" className="icon-btn" onClick={() => say(pickedItem)} aria-label="השמעה">
             🔊
